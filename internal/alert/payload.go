@@ -108,6 +108,16 @@ func (p Payload) OneLine() string {
 	return fmt.Sprintf("gghstats/%s alert: %s %s = %s", ver, target, p.Metric, p.Value)
 }
 
+// repoDashboardURL builds the HTML repo page URL (/{owner}/{repo}), not /repo/... .
+func repoDashboardURL(publicURL, repo string) string {
+	base := strings.TrimRight(strings.TrimSpace(publicURL), "/")
+	repo = strings.TrimSpace(repo)
+	if base == "" || repo == "" {
+		return ""
+	}
+	return base + "/" + repo
+}
+
 func firstNonEmpty(vals ...string) string {
 	for _, v := range vals {
 		if strings.TrimSpace(v) != "" {

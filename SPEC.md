@@ -512,7 +512,7 @@ window:  1d (UTC)
 value:   241
 rule:    gte 225
 when:    2026-07-17T04:00:00Z
-dash:    https://gghstats.example.com/repo/hrodrig/pgwd
+dash:    https://gghstats.example.com/hrodrig/pgwd
 ```
 
 Zero / floor example:
@@ -632,7 +632,7 @@ Optional later: Block Kit — **not** required for MVP.
     "threshold": 225,
     "value": 241,
     "fired_at": "2026-07-17T04:00:00Z",
-    "dashboard_url": "https://gghstats.example.com/repo/hrodrig/pgwd"
+    "dashboard_url": "https://gghstats.example.com/hrodrig/pgwd"
   }
 }
 ```

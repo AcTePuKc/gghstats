@@ -83,6 +83,12 @@ func TestRunTrafficRules_AbsoluteHighAndDebounce(t *testing.T) {
 	if !strings.Contains(bodies[0], "hrodrig/pgwd") || !strings.Contains(bodies[0], "241") {
 		t.Fatalf("body=%s", bodies[0])
 	}
+	if !strings.Contains(bodies[0], "dash:     https://stats.example.com/hrodrig/pgwd") {
+		t.Fatalf("want dash URL matching HTML /{owner}/{repo}, body=%s", bodies[0])
+	}
+	if strings.Contains(bodies[0], "/repo/") {
+		t.Fatalf("dash must not use /repo/ prefix, body=%s", bodies[0])
+	}
 
 	// Second eval same UTC day — debounced
 	RunTrafficRules(context.Background(), cfg)

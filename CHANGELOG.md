@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Alerts `dash` URL:** link to HTML repo page `/{owner}/{repo}` (matches UI/sitemap). Was wrongly `{PUBLIC_URL}/repo/...` → 404. **Parked for 1.0.0** — not a standalone 0.11.x patch.
+
 ### Changed
 
 - **Access logs:** include effective client `ip` (same `clientIP` + `GGHSTATS_TRUSTED_PROXIES` rules as rate limit / whitelist). Behind a reverse proxy with trusted peers set, logs show the public client address from `X-Forwarded-For` / `X-Real-IP` instead of only the proxy peer. **Parked for 1.0.0** — not a standalone 0.11.x patch.
