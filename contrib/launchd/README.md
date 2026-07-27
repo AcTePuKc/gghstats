@@ -2,7 +2,7 @@
 
 Run **`gghstats serve`** in the background on macOS with a **LaunchAgent** (user session, no root). Linux servers use **[systemd](../systemd/README.md)** instead.
 
-**Default SQLite path for local macOS** is still **`./data/gghstats.db`** relative to **`WorkingDirectory`** until **`~/.config/gghstats/`** becomes the default (planned before **v1.0.0**). Set **`GGHSTATS_DB`** explicitly in your env file — the example below uses **`~/Library/Application Support/gghstats/`**.
+**Default SQLite path for local macOS:** the binary now uses `~/Library/Application Support/gghstats/gghstats.db` when `GGHSTATS_DB` is unset. Set **`GGHSTATS_DB`** explicitly in your env file to override — the example below uses **`~/Library/Application Support/gghstats/`**.
 
 ## Files
 

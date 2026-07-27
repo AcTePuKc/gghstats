@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hrodrig/gghstats/internal/store"
@@ -96,7 +95,7 @@ func milestonePayload(rule RuleSpec, threshold int, now time.Time, publicURL str
 		Rule:    ruleLine,
 	}
 	if publicURL != "" {
-		p.Dash = strings.TrimRight(publicURL, "/") + "/repo/" + rule.Repo
+		p.Dash = repoDashboardURL(publicURL, rule.Repo)
 	}
 	return p
 }

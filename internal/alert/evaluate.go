@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hrodrig/gghstats/internal/store"
@@ -157,7 +156,7 @@ func evalOne(db *store.Store, rule RuleSpec, repo string, now time.Time, today, 
 	} else {
 		p.Repo = repo
 		if publicURL != "" {
-			p.Dash = strings.TrimRight(publicURL, "/") + "/repo/" + repo
+			p.Dash = repoDashboardURL(publicURL, repo)
 		}
 	}
 	if detail != "" {

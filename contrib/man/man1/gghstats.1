@@ -1,5 +1,5 @@
 .\" Man page for gghstats(1)
-.TH GGHSTATS 1 "July 2026" "gghstats v0.11.0" "User Commands"
+.TH GGHSTATS 1 "July 2026" "gghstats v1.0.0" "User Commands"
 .SH NAME
 gghstats \- self-hosted GitHub repository traffic dashboard and CLI
 .SH SYNOPSIS
@@ -81,7 +81,7 @@ Repository (or \fBGGHSTATS_REPO\fR).
 GitHub token (or \fBGGHSTATS_GITHUB_TOKEN\fR).
 .TP
 .BR \-\-db ", " PATH
-SQLite database path (default: \fB./data/gghstats.db\fR).
+SQLite database path (default: platform config dir — macOS ~/Library/Application Support/gghstats/, Linux ~/.config/gghstats/; falls back to ./data/gghstats.db).
 .TP
 .BR \-\-output ", " PATH
 (\fBbackup\fR) Destination snapshot file.
@@ -112,9 +112,8 @@ GitHub personal access token (required for \fBserve\fR unless demo mode).
 When \fBtrue\fR, enable demo mode (sample data; no token; sync disabled).
 .TP
 .B GGHSTATS_DB
-SQLite path (default: \fB./data/gghstats.db\fR, relative to the process working directory).
+SQLite path (default: platform config dir — macOS ~/Library/Application Support/gghstats/gghstats.db, Linux/FreeBSD/OpenBSD ~/.config/gghstats/gghstats.db).
 Daemons should set an absolute path (e.g. \fB/var/lib/gghstats/gghstats.db\fR).
-A user-config default (XDG / platform equivalent) is planned for v1.0; until then \fBGGHSTATS_DB\fR wins.
 See README "Data directory (SQLite paths)".
 .TP
 .B GGHSTATS_HOST

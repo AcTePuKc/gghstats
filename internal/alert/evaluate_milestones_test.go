@@ -88,6 +88,12 @@ func TestRunMilestoneRules_LadderAndDebounce(t *testing.T) {
 	if !strings.Contains(bodies[0], "window:   milestone") {
 		t.Fatalf("missing window: %s", bodies[0])
 	}
+	if !strings.Contains(bodies[0], "dash:     https://stats.example.com/hrodrig/pgwd") {
+		t.Fatalf("want dash URL matching HTML /{owner}/{repo}, body=%s", bodies[0])
+	}
+	if strings.Contains(bodies[0], "/repo/") {
+		t.Fatalf("dash must not use /repo/ prefix, body=%s", bodies[0])
+	}
 
 	RunMilestoneRules(context.Background(), cfg)
 	if len(bodies) != 1 {
