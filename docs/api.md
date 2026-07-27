@@ -5,7 +5,7 @@ How to call **gghstats** from scripts, Grafana, or your own frontend (React, Sve
 **Normative contracts** (status codes, sync rules): [SPEC.md](../SPEC.md) §2–§3.  
 **Operator env table:** [README.md](../README.md).
 
-As of **v0.11.0**.
+As of **v1.0.0**.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ![gghstats — self-hosted GitHub traffic beyond the 14-day window](assets/gghstats-poster-devto.png)
 
-[![Version](https://img.shields.io/badge/version-0.11.0-blue)](https://github.com/hrodrig/gghstats/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/hrodrig/gghstats/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/gghstats)](https://github.com/hrodrig/gghstats/releases)
 [![CI](https://github.com/hrodrig/gghstats/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/gghstats/actions)
 [![codecov](https://codecov.io/gh/hrodrig/gghstats/graph/badge.svg)](https://codecov.io/gh/hrodrig/gghstats)
@@ -178,7 +178,7 @@ gghstats run --open
 
 Or extract a [Release](https://github.com/hrodrig/gghstats/releases) tarball, or `go install github.com/hrodrig/gghstats/cmd/gghstats@latest`. Pin a version: `VERSION=v0.7.10 curl -fsSL …/install.sh | sh`.
 
-Open <http://localhost:8080> if you did not use **`--open`**. Data is stored in `./data/gghstats.db` (override with `GGHSTATS_DB`). A first sync may take a while if the default filter includes many repositories — narrow `GGHSTATS_FILTER` in [Configuration](#configuration) when you move beyond this smoke test.
+Open <http://localhost:8080> if you did not use **`--open`**. Data is stored under the [platform config directory](#data-directory-sqlite-paths) by default (override with `GGHSTATS_DB`). A first sync may take a while if the default filter includes many repositories — narrow `GGHSTATS_FILTER` in [Configuration](#configuration) when you move beyond this smoke test.
 
 ### Docker (one command, no clone — UI smoke test)
 
@@ -328,7 +328,7 @@ Server behavior:
 - Runs initial sync when database is empty
 - Re-syncs on schedule (default `1h`)
 - Serves dashboard on <http://localhost:8080>
-- Stores data in `./data/gghstats.db`
+- Stores data in the [platform config directory](#data-directory-sqlite-paths) when `GGHSTATS_DB` is unset
 - Liveness/readiness: `GET /api/v1/healthz` → `{"status":"ok"}` (no auth; Kubernetes-style)
 - SEO (per deployment): `GET /robots.txt`, `GET /sitemap.xml` (repo pages from SQLite; set **`GGHSTATS_PUBLIC_URL`** in production)
 - Prometheus: `GET /metrics` (disable with `GGHSTATS_METRICS=false`)
@@ -409,7 +409,7 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 | Variable | Default | Description |
 | --- | --- | --- |
 | `GGHSTATS_GITHUB_TOKEN` | (required) | GitHub personal access token |
-| `GGHSTATS_DB` | `./data/gghstats.db` | SQLite database path (`GGHSTATS_DB` always wins). See [Data directory](#data-directory-sqlite-paths) |
+| `GGHSTATS_DB` | platform config dir | SQLite database path (`GGHSTATS_DB` always wins). See [Data directory](#data-directory-sqlite-paths) |
 | `GGHSTATS_HOST` | `127.0.0.1` | Bind address (localhost only on bare metal). **Production Compose** sets `0.0.0.0` in **[gghstats-selfhosted](https://github.com/hrodrig/gghstats-selfhosted)** |
 | `GGHSTATS_PORT` | `8080` | Listen port |
 | `GGHSTATS_FILTER` | `*` | Repo filter expression |
@@ -448,21 +448,28 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 
 ### Data directory (SQLite paths)
 
-**Current default** (unchanged in 0.10): `./data/gghstats.db` relative to the process working directory when `GGHSTATS_DB` is unset. That is fine for laptop smoke tests; **daemons should set an absolute path**.
+**1.0 default:** the binary uses a platform-appropriate config directory when `GGHSTATS_DB` is unset:
+
+| Platform | Default (unset `GGHSTATS_DB`) |
+|----------|-------------------------------|
+| Linux / FreeBSD / OpenBSD | `~/.config/gghstats/gghstats.db` (XDG via Go `os.UserConfigDir()`) |
+| macOS | `~/Library/Application Support/gghstats/gghstats.db` |
+| Fallback (no `HOME`) | `./data/gghstats.db` |
+
+Parent directories are created automatically. **`GGHSTATS_DB` / `--db` always wins.**
+For daemons, set an absolute path.
+
+**Upgrading from 0.11.x:** if you relied on the old unset default `./data/gghstats.db`, either set `GGHSTATS_DB` to that path (or an absolute path to the old file) or move/copy the database into the new platform directory. Docker / Compose / systemd / BSD packages that already set `GGHSTATS_DB` are unchanged.
 
 | Context | Recommended `GGHSTATS_DB` | Notes |
 |---------|---------------------------|--------|
-| Local CLI / quick start | `./data/gghstats.db` (default) | Created under the cwd |
+| Local CLI / quick start | `./data/gghstats.db` | Created under the cwd |
 | Linux systemd (`.deb`/`.rpm`) | `/var/lib/gghstats/gghstats.db` | See [`contrib/systemd/README.md`](contrib/systemd/README.md); also in [`contrib/gghstats.env.example`](contrib/gghstats.env.example) |
 | FreeBSD / OpenBSD | `/var/db/gghstats/gghstats.db` | See BSD port READMEs under `contrib/` |
 | macOS LaunchAgent | `$HOME/Library/Application Support/gghstats/gghstats.db` | See [`contrib/launchd/README.md`](contrib/launchd/README.md) |
 | Docker / Compose | `/data/gghstats.db` (in-image) | Bind-mount host dir; [gghstats-selfhosted](https://github.com/hrodrig/gghstats-selfhosted) uses `GGHSTATS_HOST_DATA` |
 
-**Soft-land (0.10):** document recommended paths now; **do not** change the binary default yet. A stable user-config default is planned for **[v1.0.0](docs/plan-v1.0.0.md)** with migration notes. Until then: set **`GGHSTATS_DB`** explicitly for any long-running install.
-
-**What “XDG” means:** [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/latest/) (freedesktop.org) — common Linux/Unix layout for app files. Typical homes: config under `~/.config/` (`XDG_CONFIG_HOME`), data under `~/.local/share/` (`XDG_DATA_HOME`), cache under `~/.cache/` (`XDG_CACHE_HOME`). For gghstats v1.0 the likely local default is something like `~/.config/gghstats/gghstats.db` on Linux; macOS LaunchAgent and BSD packages keep platform paths (`Application Support`, `/var/db/…`) rather than forcing XDG on every OS.
-
-**Override always wins:** `--db` / `GGHSTATS_DB` → never rely on cwd for production.
+**Override always wins:** `--db` / `GGHSTATS_DB` → never rely on the default for production.
 
 ### Opt-in alerts
 

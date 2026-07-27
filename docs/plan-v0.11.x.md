@@ -1,6 +1,6 @@
 # Plan — v0.11.x
 
-**Status:** **Active** — target **v0.11.0** (API1–API5 + SEC3 + SYNC+/PATH debt close). SEC1/SEC2 shipped in **v0.10.2**.
+**Status:** **Closed** — **v0.11.0** shipped (API1–API5 + SEC3 + SYNC+/PATH docs). Next: [plan-v1.0.0.md](plan-v1.0.0.md).
 
 **Band goal:** ship an **API-only mode** so operators can run gghstats as JSON backend for their own UI (React, Svelte, …), exposing **what the official UI already needs** — not a generic CRUD platform. Name stays **gghstats**.
 

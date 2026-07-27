@@ -28,10 +28,7 @@ Commands:
 CLI flags (fetch/report/export):
   --repo   owner/repo      Repository (or GGHSTATS_REPO env var)
   --token  TOKEN           GitHub token (or GGHSTATS_GITHUB_TOKEN env var)
-  --db     PATH            SQLite database path (default: ./data/gghstats.db)
-
-Backup / restore:
-  --db     PATH            SQLite database path (or GGHSTATS_DB)
+  --db     PATH            SQLite database path (default: platform config dir; see README)
   --output PATH            backup: destination file (required)
   --input  PATH            restore: backup file to copy from (required)
 
@@ -47,7 +44,7 @@ Server (gghstats serve or gghstats run):
 Server env vars (serve):
   GGHSTATS_GITHUB_TOKEN        GitHub personal access token (required unless demo)
   GGHSTATS_DEMO                true = demo mode (sample data; no token / no sync)
-  GGHSTATS_DB                  SQLite path (default: ./data/gghstats.db)
+  GGHSTATS_DB                  SQLite path (default: platform config dir — macOS ~/Library/Application Support/gghstats/, Linux ~/.config/gghstats/; see README Data directory)
   GGHSTATS_HOST                Bind address (default: 127.0.0.1; use 0.0.0.0 in Docker)
   GGHSTATS_PORT                Listen port (default: 8080)
   GGHSTATS_FILTER              Repo filter (default: * = all)

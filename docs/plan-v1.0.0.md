@@ -41,12 +41,14 @@ Parent: [ROADMAP.md](../ROADMAP.md) · Spec: [SPEC.md](../SPEC.md)
 
 ## Checklist
 
-- [ ] Prerequisites from 0.9 / 0.10 verified; 0.11 API-only preferred
-- [ ] Default path implementation + tests + upgrade notes
-- [ ] SPEC “1.0 stability” section or banner
-- [ ] Man page + env example + port sync
+- [x] Prerequisites from 0.9 / 0.10 verified; 0.11 API-only preferred
+- [x] Default path implementation + tests + upgrade notes
+- [x] SPEC “1.0 stability” section or banner
+- [x] Man page + env example + port sync
 - [ ] `make release-check`
 - [ ] Merge `develop` → `main`, tag, GitHub release
+- [x] OBS access-log client IP (in CHANGELOG 1.0.0)
+- [x] ALERT dash URL fix (in CHANGELOG 1.0.0)
 
 ## After 1.0
 

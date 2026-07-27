@@ -7,13 +7,25 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Fixed
-
-- **Alerts `dash` URL:** link to HTML repo page `/{owner}/{repo}` (matches UI/sitemap). Was wrongly `{PUBLIC_URL}/repo/...` → 404. **Parked for 1.0.0** — not a standalone 0.11.x patch.
+## [1.0.0] - 2026-07-26
 
 ### Changed
 
-- **Access logs:** include effective client `ip` (same `clientIP` + `GGHSTATS_TRUSTED_PROXIES` rules as rate limit / whitelist). Behind a reverse proxy with trusted peers set, logs show the public client address from `X-Forwarded-For` / `X-Real-IP` instead of only the proxy peer. **Parked for 1.0.0** — not a standalone 0.11.x patch.
+- **Stable default SQLite path:** the binary default is now platform-appropriate:
+  Linux / FreeBSD / OpenBSD `~/.config/gghstats/gghstats.db` (XDG via `os.UserConfigDir()`),
+  macOS `~/Library/Application Support/gghstats/gghstats.db`.
+  Falls back to `./data/gghstats.db` when `HOME` or `os.UserConfigDir()` is unavailable.
+  `GGHSTATS_DB` / `--db` always wins. Parent directories are created automatically.
+  **Upgrade:** if you used the old unset default (`./data/gghstats.db`), set `GGHSTATS_DB` to that path or move the file into the new platform directory.
+- **Access logs:** include effective client `ip` (same `clientIP` + `GGHSTATS_TRUSTED_PROXIES` rules as rate limit / whitelist). Behind a reverse proxy with trusted peers set, logs show the public client address from `X-Forwarded-For` / `X-Real-IP` instead of only the proxy peer.
+
+### Fixed
+
+- **Alerts `dash` URL:** link to HTML repo page `/{owner}/{repo}` (matches UI/sitemap). Was wrongly `{PUBLIC_URL}/repo/...` → 404.
+
+### Stable
+
+- **SPEC freeze:** documented API surface (routes, JSON fields, CLI data ops, Prometheus metrics, env vars) is frozen for the 1.x line. Additive fields allowed in minor releases; breaking changes require a major bump (2.0).
 
 ## [0.11.0] - 2026-07-23
 
@@ -532,7 +544,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/hrodrig/gghstats/compare/v0.11.0...v1.0.0
 [0.11.0]: https://github.com/hrodrig/gghstats/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/hrodrig/gghstats/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/hrodrig/gghstats/compare/v0.10.0...v0.10.1

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -59,5 +60,9 @@ func envBool(key string, defaultVal bool) bool {
 }
 
 func defaultDBPath() string {
-	return "./data/gghstats.db"
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "./data/gghstats.db"
+	}
+	return filepath.Join(dir, "gghstats", "gghstats.db")
 }

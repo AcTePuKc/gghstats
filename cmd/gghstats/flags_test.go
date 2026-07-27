@@ -2,13 +2,29 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestDefaultDBPath(t *testing.T) {
 	t.Parallel()
-	if got := defaultDBPath(); got != "./data/gghstats.db" {
-		t.Errorf("defaultDBPath() = %q", got)
+	got := defaultDBPath()
+	if got == "" {
+		t.Fatal("defaultDBPath() returned empty string")
+	}
+	if !strings.HasSuffix(got, string(filepath.Separator)+"gghstats.db") {
+		t.Errorf("defaultDBPath() = %q, want path ending with gghstats.db", got)
+	}
+	// On macOS: ~/Library/Application Support/gghstats/gghstats.db
+	// On Linux: ~/.config/gghstats/gghstats.db
+	// Fallback (no HOME): ./data/gghstats.db
+	if strings.HasPrefix(got, "."+string(filepath.Separator)) {
+		// Fallback path — fine when os.UserConfigDir() fails
+	} else {
+		if !strings.Contains(got, "gghstats") {
+			t.Errorf("defaultDBPath() = %q, want gghstats in path", got)
+		}
 	}
 }
 

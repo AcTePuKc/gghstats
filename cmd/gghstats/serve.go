@@ -56,7 +56,7 @@ type serveConfig struct {
 func loadServeConfig() serveConfig {
 	cfg := serveConfig{
 		GithubToken:      os.Getenv("GGHSTATS_GITHUB_TOKEN"),
-		DB:               envOr("GGHSTATS_DB", "./data/gghstats.db"),
+		DB:               envOr("GGHSTATS_DB", defaultDBPath()),
 		Host:             envOr("GGHSTATS_HOST", "127.0.0.1"),
 		Port:             envOr("GGHSTATS_PORT", "8080"),
 		Filter:           envOr("GGHSTATS_FILTER", "*"),

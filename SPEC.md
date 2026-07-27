@@ -1,8 +1,14 @@
 # Spec — HTTP API and sync
 
-Normative operator contracts for **gghstats** as of **v0.11.0**.
+Normative operator contracts for **gghstats** as of **v1.0.0**.
 **Client how-to (examples, auth, dogfood map):** **[docs/api.md](docs/api.md)**.  
 Narrative install/env: **[README.md](README.md)**. Product direction: **[ROADMAP.md](ROADMAP.md)**.
+
+> **1.0 Stability:** This document describes the frozen API surface for the 1.x line.
+> All documented routes, JSON fields, CLI data ops, Prometheus metric names, and
+> environment variable names are **stable** — they will not be renamed or removed
+> without a SemVer major bump (2.0). **Additive** fields, routes, and env vars are
+> allowed in minor releases. Operator-facing behavior described here is normative.
 
 This document describes **current** behavior. Changes that break clients must bump SemVer appropriately and update this file + CHANGELOG.
 
@@ -202,8 +208,11 @@ Shared flags for fetch/report/export: `--repo` / `GGHSTATS_REPO`, `--token` / `G
 
 ## 6. Stability policy
 
-Until **1.0.0**, the JSON API may gain additive fields without a major bump.  
-Removing or renaming documented fields/routes is a **breaking** change (major after 1.0; clear CHANGELOG note before).
+**As of 1.0.0**, the documented API surface (routes, JSON fields, CLI data ops,
+Prometheus metric names, environment variables) is **frozen** for the 1.x line.
+Additive fields, routes, and env vars are allowed in minor releases.  
+Removing or renaming documented fields/routes is a **breaking** change requiring a
+SemVer major bump (2.0) and a clear CHANGELOG note.
 
 Prometheus metric names introduced in release notes are treated as operator-facing; renames require a CHANGELOG entry.
 
