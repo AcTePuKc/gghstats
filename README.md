@@ -2,7 +2,7 @@
 
 ![gghstats — self-hosted GitHub traffic beyond the 14-day window](assets/gghstats-poster-devto.png)
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/hrodrig/gghstats/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-blue)](https://github.com/hrodrig/gghstats/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/gghstats)](https://github.com/hrodrig/gghstats/releases)
 [![CI](https://github.com/hrodrig/gghstats/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/gghstats/actions)
 [![codecov](https://codecov.io/gh/hrodrig/gghstats/graph/badge.svg)](https://codecov.io/gh/hrodrig/gghstats)
@@ -106,25 +106,103 @@ Same repository ([`hrodrig/gghstats`](https://github.com/hrodrig/gghstats)):
 
 ### Compared to similar tools
 
-Niche peers that **archive GitHub traffic beyond the 14-day window**. Not a full market survey (SaaS dashboards and one-off scripts omitted). Closest peer: **[ghstats](https://github.com/vladkens/ghstats)**.
+Niche peers that **archive GitHub traffic beyond the 14-day window**. Not a full market survey (SaaS dashboards and one-off scripts omitted). **Fine-grained comparison** below focuses on the three closest traffic-archive peers: **[ghstats](https://github.com/vladkens/ghstats)**, **[git-clone-stats](https://github.com/taylorwilsdon/git-clone-stats)**, and **gghstats**. Also in the niche: **[gh-tracker](https://github.com/rayketcham-lab/gh-tracker)** (broader GitHub metrics, React + FastAPI) and **GitHub Traffic** (14-day UI only, no self-hosted archive).
 
-| | **gghstats** | [ghstats](https://github.com/vladkens/ghstats) | [git-clone-stats](https://github.com/taylorwilsdon/git-clone-stats) | [gh-tracker](https://github.com/rayketcham-lab/gh-tracker) | GitHub Traffic |
-|--|--------------|------------------------------------------------|------------------------------------------------------------------|--------------------------------------------------------------|----------------|
-| Maintenance (checked 2026-07) | Active (`v0.10.2`) | Occasional (last commit ~2026-06) | Quiet (last release ~2025-08) | Early / intermittent (last commit ~2026-04) | Active (GitHub product) |
-| History beyond 14d | Yes (SQLite) | Yes (SQLite) | Yes (SQLite / Firestore) | Yes (SQLite) | No (14d only) |
-| Self-hosted dashboard | Yes | Yes | Yes (minimal HTML/JS) | Yes (React + FastAPI) | GitHub UI only |
-| Runtime / packaging | Go single binary; `.deb`/`.rpm`/BSD | Rust single binary; Docker | Python (PyPI / Docker) | Python + Node frontend | — |
-| CLI + backup/export | Yes (`fetch`/`report`/`backup`) | Limited | Yes (`sync` / `server` + DB export) | Collector CLI + CSV/JSON export | — |
-| Multi-repo sync / filters | Yes (owner/repo rules) | Yes (owner, forks, archived) | Yes (UI + org/user) | Yes (list / auto-discover) | Per-repo |
-| Badges (README SVG) | Yes | — | Yes | — | — |
-| UI languages (i18n) | EN / ES / DE / FR / PT | — | — | — | — |
-| Repo compare / momentum | H2H + 7d/30d clone momentum | — | Charts / date ranges | KPI trend indicators | — |
-| Broader GitHub metrics | Traffic + star history focus | Traffic + stars/forks/issues/PRs | Clones / views / stars | Traffic + people + commits + releases + more | Traffic tab only |
-| JSON API | Yes | Yes | Yes | Yes (many endpoints) | REST API only |
-| Release supply chain | Cosign + SBOM | Check upstream | Check upstream | Check upstream | — |
-| Ops manifests | [gghstats-selfhosted](https://github.com/hrodrig/gghstats-selfhosted) (Compose / Helm / observability) | Docker-focused | Docker Compose / App Engine | systemd units | — |
+All labels are a **snapshot (checked 2026-07-27)** — re-verify upstream stars, releases, and defaults before you depend on a peer.
 
-gghstats stays **single binary + SQLite**; leans packaging, i18n, H2H/momentum, and a companion ops repo. Pick **gh-tracker** if you want a wider GitHub analytics surface (people, commits, releases) with a React UI. Maintenance labels are a snapshot (GitHub last commit / release at check time) — re-verify upstream before you depend on a peer.
+#### Snapshot
+
+| | **gghstats** | [ghstats](https://github.com/vladkens/ghstats) | [git-clone-stats](https://github.com/taylorwilsdon/git-clone-stats) |
+|--|--------------|------------------------------------------------|---------------------------------------------------------------------|
+| Runtime | Go 1.26, single binary | Rust, single binary | Python (PyPI / uv) |
+| Release | **1.0.1** | ~0.9.0 (Jun 2026) | ~1.0.6 (~Aug 2025) |
+| GitHub stars (approx.) | ~5 | ~180 | ~24 |
+| Storage | SQLite | SQLite | SQLite or Firestore |
+| Container image | distroless nonroot, multi-arch | ~20 MB, non-root | ~150 MB, non-root (check upstream) |
+| License | MIT | MIT | MIT |
+| Maintenance | Very active (`0.7`→`1.0` in ~4 months) | Occasional (community PRs) | Quiet (last release ~2025) |
+
+#### What each measures
+
+| Metric | **gghstats** | **ghstats** | **git-clone-stats** |
+|--------|--------------|-------------|---------------------|
+| Clones (count + uniques) | Yes | Yes | Yes |
+| Views (count + uniques) | Yes | Yes | Yes |
+| Referrers / popular paths | Yes | Yes | No |
+| Star history (time series) | Yes (incremental) | Yes | Current count only |
+| Issues / PRs / forks on dashboard | Partial (repo metadata) | Yes (issues + PRs) | Basic stars |
+| Momentum 7d / 30d | Yes | — | — |
+| Head-to-head (compare two repos) | Yes | — | — |
+
+**ghstats** is the widest on repo metrics (issues/PRs). **gghstats** focuses on traffic + stars + comparison/momentum. **git-clone-stats** is the narrowest: clones/views/stars and badges.
+
+#### Product and UX
+
+| Capability | **gghstats** | **ghstats** | **git-clone-stats** |
+|------------|--------------|-------------|---------------------|
+| Web dashboard | Chart.js, neo-brutalist, light/dark | Own UI, tables + charts | Minimal HTML/JS, cards + charts |
+| i18n | EN / ES / DE / FR / PT | — | — |
+| README SVG badges | Yes (native) | — | Yes (shields.io style) |
+| Demo without token | Yes (`--demo`) | — | — |
+| Repo management in UI | Auto-discover + filter | Auto-discover + filter | **Add/remove in UI** |
+| JSON API | Rich (repos, traffic, stars, popular, H2H, charts, sync) + **API-only mode** | `/api/repos` only | `/api/stats`, chart-data, badge |
+| Prometheus | Yes (`/metrics`) | — | — |
+| Alerts (Slack / webhook / Loki / SMTP) | Yes | — | — |
+| Backup / restore CLI | Yes | — (volume only) | DB export/import |
+| One-shot CLI | `fetch` / `report` / `export` / `backup` | Limited | `sync` + `server` |
+
+#### Sync and filters
+
+| | **gghstats** | **ghstats** | **git-clone-stats** |
+|--|--------------|-------------|---------------------|
+| Default interval | `1h` | Hourly cron (`0 59 * * * *`) | daily / weekly / biweekly |
+| Parallel workers | Yes (pool, default 4) | Serial (simple design) | CLI sync / background |
+| Filter syntax | `owner/*`, `!fork`, `!archived` | Very similar (`GHS_FILTER`) | Username + org + manual add in UI |
+| Star history | Incremental (skip when count unchanged) | History sync | No historical series |
+| Retries / rate limit | Backoff + jitter + `X-RateLimit-Reset` | Basic read timeout | Python implementation |
+| Private repos | `GGHSTATS_INCLUDE_PRIVATE` | `GHS_INCLUDE_PRIVATE` | Token `repo` scope |
+
+**gghstats** and **ghstats** filters are almost siblings (same problem, same `!fork` / `!archived` rules).
+
+#### Security and ops
+
+| | **gghstats** | **ghstats** | **git-clone-stats** |
+|--|--------------|-------------|---------------------|
+| Default bind | `127.0.0.1` (since 0.7) | `0.0.0.0` | Typical `0.0.0.0` / port flag |
+| Trusted proxies | Yes (`GGHSTATS_TRUSTED_PROXIES`) | Not documented | No |
+| Rate limit + IP whitelist | Yes | — | — |
+| Security headers + CSP | Yes | Basic | Basic |
+| HTTP server timeouts | Yes (configured) | API read timeout | — |
+| Supply chain | Cosign + SBOM + coverage ≥80% | Small image | Multi-stage Docker |
+| Native packaging | `.deb` / `.rpm` / Homebrew / FreeBSD / OpenBSD | Docker-first | PyPI + Docker + **App Engine** |
+| Ops companion | **[gghstats-selfhosted](https://github.com/hrodrig/gghstats-selfhosted)** (Compose, Traefik, Helm, Grafana) | Compose in repo | Compose + GAE guide |
+
+**gghstats** leads on hardening and server-grade packaging. **git-clone-stats** wins if you want **Firestore + Google App Engine** without running a VPS.
+
+#### When to choose
+
+**Choose gghstats if** you want a **1.0-stable** contract, full CLI, Prometheus, alerts, i18n, H2H/momentum, badges, and demo mode; you deploy on a VPS or behind Traefik and care about trusted proxies, rate limits, distroless images, and Cosign; you prefer **Go** (single binary, no Python/Rust toolchain on the host); you want native packaging (Homebrew, deb/rpm, BSD ports) in addition to Docker.
+
+**Choose ghstats if** you want the **lightest, most popular** niche option (~180 stars, ~20 MB image); dashboard + `/api/repos` + solid filters are enough; you prefer **Rust** and a deliberately minimal setup; you do not need badges, alerts, Prometheus, i18n, or repo comparisons.
+
+**Choose git-clone-stats if** you live in **Python / PyPI / uv** and want `pip install` plus a `sync` / `server` CLI; you care about **Firestore** or **Google App Engine**; you want **repo management in the UI** (add/remove) rather than aggressive auto-discovery; shields.io badges and a minimal HTML front end without a build step are enough; you do not need referrers/paths, H2H, Prometheus, or gghstats-level hardening.
+
+**Also consider:** **[gh-tracker](https://github.com/rayketcham-lab/gh-tracker)** for people/commits/releases breadth with a React UI; **GitHub Traffic** when 14 days in the GitHub UI is enough.
+
+#### Relationship (honest)
+
+- **gghstats** acknowledges **[ghstats](https://github.com/vladkens/ghstats)** as prior art in the same space (Rust, SQLite, traffic &gt;14d) and **[git-clone-stats](https://github.com/taylorwilsdon/git-clone-stats)** for badges and a minimal dashboard idea. **gghstats** is not a fork — independent **Go** code.
+- **ghstats** is the adoption and minimalism benchmark in this niche.
+- **gghstats** has invested most in **1.x product + ops + security** in a short window.
+- **git-clone-stats** is the most **scriptable / cloud-friendly** of the three.
+
+#### One-line summary
+
+| Project | In one sentence |
+|---------|-----------------|
+| **gghstats** | Full Go dashboard/ops stack, self-hosted production-ready with a frozen **1.0** API contract. |
+| **ghstats** | Minimal, popular **Rust** option: small container, traffic archive, little else. |
+| **git-clone-stats** | **Python/PyPI** path with badges and a route to Firestore / App Engine. |
 
 ### Repository page charts (Clones & Views)
 
