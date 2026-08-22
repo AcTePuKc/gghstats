@@ -93,15 +93,15 @@ func main() {
 type cliCmd func(args []string) error
 
 var cliCommands = map[string]cliCmd{
-	"serve":   runServe,
-	"run":     runServe,
-	"fetch":   runFetch,
-	"report":  runReport,
-	"export":  runExport,
-	"backup":  runBackup,
-	"restore": runRestore,
-	"alert":   runAlert,
-	"repo":    runRepo,
+	"serve":    runServe,
+	"run":      runServe,
+	"fetch":    runFetch,
+	"report":   runReport,
+	"export":   runExport,
+	"backup":   runBackup,
+	"restore":  runRestore,
+	"alert":    runAlert,
+	"repo":     runRepo,
 	"featured": runFeatured,
 }
 

@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"log/slog"
+
 	"github.com/hrodrig/gghstats/internal/github"
 	"github.com/hrodrig/gghstats/internal/store"
 )
@@ -42,4 +44,46 @@ func resolveTracked(gh *github.Client, db *store.Store, opts Options) ([]github.
 		repos = append(repos, github.Repo{FullName: p})
 	}
 	return repos, nil
+}
+
+// syncFeaturedMeta refreshes stored metadata for every featured showcase
+// entry using only the repo endpoint (no traffic). For a fork, the parent is
+// resolved for upstream description + stars; for a plain repo the repo itself
+// is the upstream. Per-row failures are logged and skipped — they never fail
+// the sync cycle (R11).
+func syncFeaturedMeta(gh *github.Client, db *store.Store) error {
+	featured, err := db.ListFeatured()
+	if err != nil {
+		return err
+	}
+	for _, f := range featured {
+		meta, err := gh.Repo(f.Name)
+		if err != nil {
+			slog.Warn("featured metadata failed", "repo", f.Name, "error", err)
+			continue
+		}
+		upstream := meta
+		parentName := ""
+		if meta.Parent != nil && meta.Parent.FullName != "" {
+			parentName = meta.Parent.FullName
+			up, err := gh.Repo(parentName)
+			if err != nil {
+				slog.Warn("featured parent metadata failed", "repo", f.Name, "parent", parentName, "error", err)
+				upstream = meta
+			} else {
+				upstream = up
+			}
+		}
+		if err := db.UpsertFeaturedMeta(
+			f.Name,
+			parentName,
+			upstream.FullName,
+			upstream.DescriptionOrEmpty(),
+			upstream.StargazersCount,
+			meta.Fork,
+		); err != nil {
+			slog.Warn("featured metadata upsert failed", "repo", f.Name, "error", err)
+		}
+	}
+	return nil
 }

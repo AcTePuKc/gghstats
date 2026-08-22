@@ -67,6 +67,12 @@ func Run(gh *github.Client, db *store.Store, opts Options, rec ErrRecorder) (Run
 		slog.Error("update deltas failed", "error", err)
 	}
 
+	if gh != nil {
+		if err := syncFeaturedMeta(gh, db); err != nil {
+			slog.Warn("featured metadata sync failed", "error", err)
+		}
+	}
+
 	slog.Info("sync completed", "repos", len(repos), "failed", result.ReposFailed)
 	result.Success = true
 	return result, nil
