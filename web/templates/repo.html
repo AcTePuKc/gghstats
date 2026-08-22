@@ -18,25 +18,25 @@
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">
               <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.total_clones"}}</div>
-              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{.Repo.CloneUniques}} <span class="text-muted fw-normal fs-6">/</span> {{.Repo.TotalClones}}</div>
+              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.CloneUniques}} <span class="text-muted fw-normal fs-6">/</span> {{call .Num .Repo.TotalClones}}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">
               <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.total_views"}}</div>
-              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{.Repo.TotalUniques}} <span class="text-muted fw-normal fs-6">/</span> {{.Repo.TotalViews}}</div>
+              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.TotalUniques}} <span class="text-muted fw-normal fs-6">/</span> {{call .Num .Repo.TotalViews}}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">
               <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.stars"}}</div>
-              <div class="fs-4 fw-bold mt-1" data-gghstats-role="stat-value">{{.Repo.Stars}}</div>
+              <div class="fs-4 fw-bold mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.Stars}}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">
               <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.forks"}}</div>
-              <div class="fs-4 fw-bold mt-1" data-gghstats-role="stat-value">{{.Repo.Forks}}</div>
+              <div class="fs-4 fw-bold mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.Forks}}</div>
             </div>
           </div>
         </div>

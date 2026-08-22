@@ -88,8 +88,8 @@ func TestFeaturedPageShell(t *testing.T) {
 	if !strings.Contains(body, "matiassingers/awesome-readme") {
 		t.Error("expected upstream repo name in featured page")
 	}
-	if !strings.Contains(body, "15000") {
-		t.Error("expected upstream stars in featured page")
+	if !strings.Contains(body, "15,000") {
+		t.Error("expected formatted upstream stars (thousands separator) in featured page")
 	}
 	// The card title/link must be an external GitHub URL, not an internal route
 	// (https://github.com/{upstream_full_name}). Regression: an earlier draft
@@ -113,5 +113,38 @@ func TestFeaturedPageEmpty(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), `data-gghstats-role="featured-empty"`) {
 		t.Errorf("expected empty-state marker in featured page body")
+	}
+}
+
+// With GGHSTATS_COMPACT_NUMBERS (CompactNumbers=true), large upstream stars
+// render in compact metric notation (e.g. 15.0k) rather than 15,000.
+func TestFeaturedPageCompactNumbers(t *testing.T) {
+	db := testStore(t)
+	if err := db.AddFeatured("hrodrig/awesome-readme"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpsertFeaturedMeta(
+		"hrodrig/awesome-readme",
+		"matiassingers/awesome-readme",
+		"matiassingers/awesome-readme",
+		"A curated list of awesome readmes",
+		15000,
+		true,
+	); err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{Store: db, CompactNumbers: true})
+	req := httptest.NewRequest(http.MethodGet, "/featured", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "15.0k") {
+		t.Errorf("expected compact stars (15.0k) in featured page, got body without it")
+	}
+	if strings.Contains(body, "15,000") {
+		t.Errorf("compact mode must not render thousands separators (15,000)")
 	}
 }

@@ -78,6 +78,7 @@ Server env vars (serve):
   GGHSTATS_CUSTOM_CSS          Optional .css path: overrides / extends neo-brutalist app.css (simpler UI, branding)
   GGHSTATS_DEFAULT_LOCALE      Dashboard default locale (default: en)
   GGHSTATS_ENABLED_LOCALES     Comma-separated UI locales (default: en,es,de)
+  GGHSTATS_COMPACT_NUMBERS     Set true to render large counts abbreviated (1.2k, 1.1M) instead of thousands separators
   GGHSTATS_HEAD_HTML           Raw HTML injected just before </head> on every page (analytics, extra CSS)
   GGHSTATS_REVERSE_PROXY_RULES JSON array of reverse-proxy rules. See contrib/gghstats.env.example for format.
   GGHSTATS_ENABLE_COLLECTOR    Opt-in anonymous startup telemetry (default false)

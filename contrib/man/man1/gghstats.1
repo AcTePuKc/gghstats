@@ -197,6 +197,11 @@ Allow public badge SVG URLs (default: \fBtrue\fR).
 .B GGHSTATS_METRICS
 Set to \fBfalse\fR to disable Prometheus \fB/metrics\fR.
 .TP
+.B GGHSTATS_COMPACT_NUMBERS
+When \fBtrue\fR, render large counts (stars, forks, views, clones) with compact
+metric notation (\fB25.7k\fR, \fB1.1M\fR) instead of locale thousands separators
+(\fB25,746\fR). Default: \fBfalse\fR.
+.TP
 .B GGHSTATS_RATE_LIMIT_ENABLED
 Set to \fBfalse\fR to disable per-IP rate limiting (default: \fBtrue\fR).
 .TP

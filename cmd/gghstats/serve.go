@@ -49,6 +49,7 @@ type serveConfig struct {
 	EnableUpdateCheck bool
 	Demo              bool
 	APIOnly           bool
+	CompactNumbers    bool
 	CORSOrigins       string
 	CSPMode           string
 }
@@ -95,6 +96,7 @@ func loadServeConfig() serveConfig {
 	cfg.EnableCollector = envBool("GGHSTATS_ENABLE_COLLECTOR", false)
 	cfg.EnableUpdateCheck = envBool("GGHSTATS_ENABLE_UPDATE_CHECK", true)
 	cfg.APIOnly = envBool("GGHSTATS_API_ONLY", false)
+	cfg.CompactNumbers = envBool("GGHSTATS_COMPACT_NUMBERS", false)
 	cfg.CORSOrigins = os.Getenv("GGHSTATS_CORS_ORIGINS")
 	cfg.CSPMode = strings.TrimSpace(os.Getenv("GGHSTATS_CSP"))
 
@@ -333,6 +335,7 @@ func runServe(args []string) error {
 		CustomCSSQuery:    cssQuery,
 		DefaultLocale:     i18n.EnvDefaultLocale(),
 		EnabledLocales:    i18n.EnvEnabledLocales(),
+		CompactNumbers:    cfg.CompactNumbers,
 		RateLimiter:       rateLimiter,
 		TrustedProxies:    trusted,
 		Whitelist:         whitelist,
