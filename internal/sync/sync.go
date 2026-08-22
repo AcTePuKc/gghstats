@@ -32,7 +32,7 @@ func Run(gh *github.Client, db *store.Store, opts Options, rec ErrRecorder) (Run
 		result.RateLimitRemaining = gh.LastRateLimitRemaining()
 	}
 
-	repos, err := resolveRepos(gh, opts)
+	repos, err := resolveTracked(gh, db, opts)
 	if err != nil {
 		result.Unreachable = isUnreachableErr(err)
 		result.Success = false
