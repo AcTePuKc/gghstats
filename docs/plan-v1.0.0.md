@@ -52,5 +52,8 @@ Parent: [ROADMAP.md](../ROADMAP.md) · Spec: [SPEC.md](../SPEC.md)
 
 ## After 1.0
 
-- **1.1+:** finish Line B if skipped; Line C rollups; selfhosted dashboards for new metrics.
+- **1.0.x:** SemVer patches on 1.0.1 (`1.0.2`, `1.0.3`, …).
+- **1.1.0:** Line E — repo pins CLI + Featured showcase ([plan-v1.1.0.md](plan-v1.1.0.md)). Not Line B.
+- **1.1.x:** patches only **after** 1.1.0 is tagged.
+- **2.0.0:** Line B (webhooks) if still skipped; Line C rollups later.
 - Non-goals remain unless a new major version rethinks them.
