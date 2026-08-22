@@ -64,6 +64,7 @@ func (s *Store) migrate() error {
 		migrateV3,
 		migrateV4,
 		migrateV5,
+		migrateV6,
 	}
 
 	var current int
@@ -190,6 +191,34 @@ func migrateV5(db *sql.DB) error {
 			stamp    TEXT NOT NULL
 		)`)
 	return err
+}
+
+// migrateV6 adds the operator catalog: dashboard pins and the Featured showcase
+// (v1.1.0, SPEC "repo pins CLI + Featured showcase").
+func migrateV6(db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS pins (
+			name       TEXT PRIMARY KEY,
+			created_at TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS featured (
+			name                 TEXT PRIMARY KEY,
+			created_at           TEXT NOT NULL,
+			sort                 INTEGER NOT NULL DEFAULT 0,
+			parent_full_name     TEXT NOT NULL DEFAULT '',
+			upstream_full_name   TEXT NOT NULL DEFAULT '',
+			upstream_description TEXT NOT NULL DEFAULT '',
+			upstream_stars       INTEGER NOT NULL DEFAULT 0,
+			fork                 INTEGER NOT NULL DEFAULT 0,
+			meta_updated_at      TEXT NOT NULL DEFAULT ''
+		)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // --- Upsert methods ---
