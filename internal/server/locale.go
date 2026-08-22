@@ -17,15 +17,17 @@ type localeBinder struct {
 	Lang   string
 	T      func(string) string
 	Tfmt   func(string, map[string]string) string
+	Num    func(int) string
 }
 
-func newLocaleBinder(locale string, bundle *i18n.Bundle) localeBinder {
+func newLocaleBinder(locale string, bundle *i18n.Bundle, compact bool) localeBinder {
 	locale = i18n.NormalizeLocale(locale)
 	return localeBinder{
 		Locale: locale,
 		Lang:   i18n.LangAttr(locale),
 		T:      func(key string) string { return bundle.T(locale, key) },
 		Tfmt:   func(key string, vars map[string]string) string { return bundle.Tfmt(locale, key, vars) },
+		Num:    func(n int) string { return i18n.FormatCount(n, locale, compact) },
 	}
 }
 
@@ -98,7 +100,7 @@ func marshalJSI18n(bundle *i18n.Bundle, locale string) template.JS {
 func mergeLayoutLocale(r *http.Request, cfg Config, data layoutData) layoutData {
 	loc := localeFromRequest(r, cfg)
 	bundle := i18n.MustLoad()
-	lb := newLocaleBinder(loc, bundle)
+	lb := newLocaleBinder(loc, bundle, cfg.CompactNumbers)
 	data.localeBinder = lb
 	data.LocaleLinks = buildLocaleLinks(r, cfg, loc)
 	data.JSI18n = marshalJSI18n(bundle, loc)
@@ -110,7 +112,7 @@ func mergeLayoutLocale(r *http.Request, cfg Config, data layoutData) layoutData 
 
 func bindPageLocale(r *http.Request, cfg Config) localeBinder {
 	loc := localeFromRequest(r, cfg)
-	return newLocaleBinder(loc, i18n.MustLoad())
+	return newLocaleBinder(loc, i18n.MustLoad(), cfg.CompactNumbers)
 }
 
 func jsI18nPayload(bundle *i18n.Bundle, locale string) map[string]string {

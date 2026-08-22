@@ -7,6 +7,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-22
+
+### Added
+
+- **Metric count formatting:** thousands separators (locale-aware) and an opt-in compact mode (`GGHSTATS_COMPACT_NUMBERS=true`) that renders star/view/clone counts as `1.2k` / `34.5k` / `1.1M` (base 1000) across the dashboard.
+- **Featured showcase pagination + search + sort:** `/featured` now honors `page`, `per_page`, `q`, `sort`, and `dir` query params (same pattern as the index), with a search bar, an **Order / Name / Stars** sort toolbar, and top/bottom pagination bars. `FilterFeatured` does the filtering/ordering/paging in SQL (whitelisted sort columns, `LIMIT/OFFSET`) and returns the total match count.
+
+### Changed
+
+- **`GGHSTATS_COMPACT_NUMBERS`** env var documented in `contrib/gghstats.env.example` and the `gghstats.1` man page (ENVIRONMENT section).
+
+### Fixed
+
+- **Featured intro copy** rewording applied across all five locales (en/es/de/fr/pt-br).
+
 ## [1.1.0] - 2026-08-22
 
 ### Added
@@ -565,7 +580,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/hrodrig/gghstats/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/hrodrig/gghstats/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/hrodrig/gghstats/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/hrodrig/gghstats/compare/v0.11.0...v1.0.0

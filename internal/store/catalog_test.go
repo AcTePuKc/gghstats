@@ -136,3 +136,102 @@ func checkFeaturedRemove(t *testing.T, s *Store, name string) {
 		t.Fatalf("RemoveFeatured missing = %v, %v", rem, err)
 	}
 }
+
+// filterFeatured runs FilterFeatured and returns the names + total, failing
+// the test on any store error so callers stay low-complexity.
+func filterFeatured(t *testing.T, s *Store, q, sort, dir string, page, perPage int) ([]string, int) {
+	t.Helper()
+	got, total, err := s.FilterFeatured(q, sort, dir, page, perPage)
+	if err != nil {
+		t.Fatalf("FilterFeatured(%q,%q,%q,%d,%d): %v", q, sort, dir, page, perPage, err)
+	}
+	return names(got), total
+}
+
+func seedFeatured(t *testing.T, s *Store) {
+	t.Helper()
+	for _, name := range []string{"zzz/last", "aaa/first", "mmm/mid", "bbb/second"} {
+		mustAddFeatured(t, s, name)
+	}
+	stars := map[string]int{"zzz/last": 10, "aaa/first": 40, "mmm/mid": 30, "bbb/second": 20}
+	for name, st := range stars {
+		if err := s.UpsertFeaturedMeta(name, "", "up/"+name, "desc", st, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func assertFeatureds(t *testing.T, got []string, want string) {
+	t.Helper()
+	if len(got) == 0 || got[0] != want {
+		t.Fatalf("head = %v, want %q first", got, want)
+	}
+}
+
+func TestFilterFeaturedDefaultOrder(t *testing.T) {
+	s := tempDB(t)
+	seedFeatured(t, s)
+	got, total := filterFeatured(t, s, "", "sort", "asc", 1, 100)
+	if total != 4 || len(got) != 4 {
+		t.Fatalf("default = %d/%d, want 4/4", len(got), total)
+	}
+	assertFeatureds(t, got, "zzz/last")
+	if got[3] != "bbb/second" {
+		t.Fatalf("default tail = %v, want bbb/second", got)
+	}
+}
+
+func TestFilterFeaturedSortByName(t *testing.T) {
+	s := tempDB(t)
+	seedFeatured(t, s)
+	got, _ := filterFeatured(t, s, "", "name", "asc", 1, 100)
+	assertFeatureds(t, got, "aaa/first")
+	if got[3] != "zzz/last" {
+		t.Fatalf("name asc tail = %v, want zzz/last", got)
+	}
+}
+
+func TestFilterFeaturedSortByStars(t *testing.T) {
+	s := tempDB(t)
+	seedFeatured(t, s)
+	got, _ := filterFeatured(t, s, "", "stars", "desc", 1, 100)
+	assertFeatureds(t, got, "aaa/first")
+	if got[3] != "zzz/last" {
+		t.Fatalf("stars desc tail = %v, want zzz/last (10 stars)", got)
+	}
+}
+
+func TestFilterFeaturedSearch(t *testing.T) {
+	s := tempDB(t)
+	seedFeatured(t, s)
+	got, total := filterFeatured(t, s, "MM", "", "asc", 1, 100)
+	if total != 1 || len(got) != 1 || got[0] != "mmm/mid" {
+		t.Fatalf("search 'MM' = %v (total %d), want [mmm/mid]", got, total)
+	}
+}
+
+func TestFilterFeaturedPagination(t *testing.T) {
+	s := tempDB(t)
+	seedFeatured(t, s)
+	got, total := filterFeatured(t, s, "", "sort", "asc", 2, 3)
+	if total != 4 || len(got) != 1 || got[0] != "bbb/second" {
+		t.Fatalf("page2 = %v (total %d), want [bbb/second]", got, total)
+	}
+}
+
+func TestFilterFeaturedUnknownSort(t *testing.T) {
+	s := tempDB(t)
+	seedFeatured(t, s)
+	got, _ := filterFeatured(t, s, "", "bogus", "asc", 1, 100)
+	if len(got) != 4 {
+		t.Fatalf("unknown sort returns %d, want 4", len(got))
+	}
+}
+
+func names(fs []Featured) []string {
+	out := make([]string, len(fs))
+	for i := range fs {
+		out[i] = fs[i].Name
+	}
+	return out
+}

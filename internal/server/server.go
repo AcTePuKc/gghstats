@@ -58,6 +58,10 @@ type Config struct {
 	DefaultLocale string
 	// EnabledLocales lists UI locales offered in the language selector (GGHSTATS_ENABLED_LOCALES).
 	EnabledLocales []string
+	// CompactNumbers renders all large counts (stars, forks, views, clones) with
+	// metric-style abbreviations (1.2k, 1.1M) instead of thousands separators
+	// (GGHSTATS_COMPACT_NUMBERS, default false).
+	CompactNumbers bool
 	// RateLimiter, when non-nil, enables per-IP rate limiting (see GGHSTATS_RATE_LIMIT_* env vars).
 	RateLimiter *RateLimiter
 	// Whitelist, when non-nil, restricts access to whitelisted IPs on configured paths (see GGHSTATS_WHITELIST* env vars).

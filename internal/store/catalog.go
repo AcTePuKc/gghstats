@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // catalog.go — operator catalog: dashboard pins and the Featured showcase
@@ -87,9 +88,12 @@ func (s *Store) RemoveFeatured(name string) (bool, error) {
 	return n > 0, nil
 }
 
+const featuredCols = `
+	name, sort, parent_full_name, upstream_full_name,
+	upstream_description, upstream_stars, fork, meta_updated_at`
+
 const featuredSelect = `
-	SELECT name, sort, parent_full_name, upstream_full_name,
-	       upstream_description, upstream_stars, fork, meta_updated_at
+	SELECT` + featuredCols + `
 	FROM featured ORDER BY sort, name`
 
 // ListFeatured returns showcase entries ordered by sort then name.
@@ -120,6 +124,76 @@ func (s *Store) FeaturedCount() (int, error) {
 	var n int
 	err := s.db.QueryRow(`SELECT COUNT(*) FROM featured`).Scan(&n)
 	return n, err
+}
+
+// featuredSortCol maps an allowed sort key to a SQL column (defence in depth).
+func featuredSortCol(sort string) string {
+	switch sort {
+	case "name":
+		return "name"
+	case "stars":
+		return "upstream_stars"
+	default:
+		return "sort" // display/insertion order
+	}
+}
+
+// FilterFeatured returns a filtered, sorted, paginated slice of showcase
+// entries plus the total number of matching rows (before pagination).
+// sort is one of "sort" (default display order), "name", or "stars" (unknown
+// values fall back to "sort"); dir is "asc" or "desc" (anything else -> asc).
+// query is a case-insensitive substring match against name and
+// upstream_full_name. page is 1-based (callers must clamp; values < 1 are
+// treated as 1). perPage is expected to be already clamped by the caller.
+func (s *Store) FilterFeatured(query, sort, dir string, page, perPage int) ([]Featured, int, error) {
+	col := featuredSortCol(sort)
+	order := "asc"
+	if dir == "desc" {
+		order = "desc"
+	}
+
+	where := ""
+	var args []any
+	if q := strings.TrimSpace(query); q != "" {
+		where = ` WHERE name LIKE ? OR upstream_full_name LIKE ?`
+		args = append(args, "%"+q+"%", "%"+q+"%")
+	}
+
+	var total int
+	countSQL := `SELECT COUNT(*) FROM featured` + where
+	if err := s.db.QueryRow(countSQL, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	if page < 1 {
+		page = 1
+	}
+
+	selectSQL := `SELECT` + featuredCols + `
+	FROM featured` + where +
+		fmt.Sprintf(` ORDER BY %s %s, name LIMIT ? OFFSET ?`, col, order)
+	args = append(args, perPage, (page-1)*perPage)
+
+	rows, err := s.db.Query(selectSQL, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []Featured
+	for rows.Next() {
+		var f Featured
+		var fork int
+		if err := rows.Scan(
+			&f.Name, &f.Sort, &f.ParentFullName, &f.UpstreamFullName,
+			&f.UpstreamDescription, &f.UpstreamStars, &fork, &f.MetaUpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		f.Fork = fork != 0
+		out = append(out, f)
+	}
+	return out, total, rows.Err()
 }
 
 // UpsertFeaturedMeta stores refreshed metadata for a featured entry. The row

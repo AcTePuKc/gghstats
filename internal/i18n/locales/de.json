@@ -174,14 +174,18 @@
   },
   "featured": {
     "title": "Hervorgehoben",
-    "intro": "Repositories, die einen Blick wert sind, kuratiert von dir. Die Metadaten werden bei jeder Synchronisierung aktualisiert.",
+    "intro": "Repositories, die wir für wichtig oder für dich interessant halten. Wir empfehlen, sie anzusehen; die Metadaten werden bei jeder Synchronisierung aktualisiert.",
     "empty": "Noch keine hervorgehobenen Repositories. Füge eines hinzu mit:",
     "empty_cmd": "gghstats featured add owner/repo",
     "forks": "Forks",
     "stars": "{{count}} Sterne",
     "view_on_github": "Auf GitHub ansehen",
     "parent_label": "Fork von",
-    "updated_at": "Metadaten aktualisiert {{when}}"
+    "updated_at": "Metadaten aktualisiert {{when}}",
+    "sort_by": "Sortieren nach",
+    "sort_order": "Reihenfolge",
+    "sort_name": "Name",
+    "sort_stars": "Sterne"
   },
   "js": {
     "syncing_all": "Synchronisiere alle Repositorien…",

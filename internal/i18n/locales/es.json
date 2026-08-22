@@ -174,14 +174,18 @@
   },
   "featured": {
     "title": "Destacados",
-    "intro": "Repositorios que merecen la pena, elegidos por ti. Los metadatos se actualizan en cada sincronización.",
+    "intro": "Repositorios que consideramos importantes o de interés para ti. Te recomendamos revisarlos; los metadatos se actualizan en cada sincronización.",
     "empty": "Aún no hay repositorios destacados. Añade uno con:",
     "empty_cmd": "gghstats featured add owner/repo",
     "forks": "Forks",
     "stars": "{{count}} estrellas",
     "view_on_github": "Ver en GitHub",
     "parent_label": "Fork de",
-    "updated_at": "Metadatos actualizados {{when}}"
+    "updated_at": "Metadatos actualizados {{when}}",
+    "sort_by": "Ordenar por",
+    "sort_order": "Orden",
+    "sort_name": "Nombre",
+    "sort_stars": "Estrellas"
   },
   "js": {
     "syncing_all": "Sincronizando todos los repositorios…",

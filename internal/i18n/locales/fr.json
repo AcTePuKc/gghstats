@@ -174,14 +174,18 @@
   },
   "featured": {
     "title": "À la une",
-    "intro": "Des dépôts qui valent le coup d'œil, sélectionnés par vous. Les métadonnées se rafraîchissent à chaque synchronisation.",
+    "intro": "Des dépôts que nous considérons importants ou dignes d'intérêt pour vous. Nous vous recommandons de les consulter ; les métadonnées se rafraîchissent à chaque synchronisation.",
     "empty": "Aucun dépôt à la une pour l'instant. Ajoutez-en un avec :",
     "empty_cmd": "gghstats featured add owner/repo",
     "forks": "Forks",
     "stars": "{{count}} étoiles",
     "view_on_github": "Voir sur GitHub",
     "parent_label": "Fork de",
-    "updated_at": "Métadonnées actualisées {{when}}"
+    "updated_at": "Métadonnées actualisées {{when}}",
+    "sort_by": "Trier par",
+    "sort_order": "Ordre",
+    "sort_name": "Nom",
+    "sort_stars": "Étoiles"
   },
   "js": {
     "syncing_all": "Synchronisation de tous les dépôts…",

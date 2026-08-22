@@ -4,7 +4,7 @@
     <div class="card border-0 shadow-sm h-100" data-gghstats-role="kpi-card">
       <div class="card-body">
         <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_repos"}}</div>
-        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{.Total}}</div>
+        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .Total}}</div>
         <div class="small text-muted">{{call .T "index.kpi_repos_sub"}}</div>
       </div>
     </div>
@@ -13,7 +13,7 @@
     <div class="card border-0 shadow-sm h-100" data-gghstats-role="kpi-card">
       <div class="card-body">
         <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_stars"}}</div>
-        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{.KPIStars}}</div>
+        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPIStars}}</div>
         <div class="small text-muted">{{call .T "index.kpi_stars_sub"}}</div>
       </div>
     </div>
@@ -22,7 +22,7 @@
     <div class="card border-0 shadow-sm h-100" data-gghstats-role="kpi-card">
       <div class="card-body">
         <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_clones"}}</div>
-        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{.KPIClones}}</div>
+        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPIClones}}</div>
         <div class="small text-muted">{{call .T "index.kpi_clones_sub"}}</div>
       </div>
     </div>
@@ -31,7 +31,7 @@
     <div class="card border-0 shadow-sm h-100" data-gghstats-role="kpi-card">
       <div class="card-body">
         <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_views"}}</div>
-        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{.KPIViews}}</div>
+        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPIViews}}</div>
         <div class="small text-muted">{{call .T "index.kpi_views_sub"}}</div>
       </div>
     </div>
@@ -94,13 +94,13 @@
             {{range .Repos}}
             <tr>
               <td><a href="/{{.Name}}" class="fw-medium" title="{{.Name}}">{{.Name}}</a></td>
-              <td class="text-end">{{.Stars}}</td>
-              <td class="text-end">{{.Forks}}</td>
-              <td class="text-end">{{.TotalViews}}</td>
-              <td class="text-end">{{.TotalClones}}</td>
-              <td class="text-end">{{.Clones1d}}</td>
-              <td class="text-end">{{.Clones7d}}</td>
-              <td class="text-end">{{.Clones30d}}</td>
+              <td class="text-end">{{call $.Num .Stars}}</td>
+              <td class="text-end">{{call $.Num .Forks}}</td>
+              <td class="text-end">{{call $.Num .TotalViews}}</td>
+              <td class="text-end">{{call $.Num .TotalClones}}</td>
+              <td class="text-end">{{call $.Num .Clones1d}}</td>
+              <td class="text-end">{{call $.Num .Clones7d}}</td>
+              <td class="text-end">{{call $.Num .Clones30d}}</td>
             </tr>
             {{else}}
             <tr>
