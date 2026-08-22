@@ -10,7 +10,48 @@
   </div>
 </div>
 
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body border-bottom app-brutal-search-panel">
+    <form method="get" class="row g-3 align-items-end" id="featured-search-form">
+      <input type="hidden" name="sort" value="{{.Sort}}">
+      <input type="hidden" name="dir" value="{{.Dir}}">
+      <input type="hidden" name="per_page" value="{{.PerPage}}">
+      <div class="col-md-8 col-lg-6">
+        <label for="q" class="form-label app-brutal-search-label mb-1 fw-semibold text-uppercase small letter-spacing-tight">{{call .T "index.search_label"}}</label>
+        <input id="q" name="q" type="search" class="form-control" placeholder="{{call .T "index.search_placeholder"}}" value="{{.Query}}" autocomplete="off">
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <button type="submit" class="btn btn-primary app-repo-search-submit w-100">{{call .T "common.search"}}</button>
+      </div>
+    </form>
+  </div>
+  {{if and .Featured (gt .Total .PerPage)}}
+  <div class="card-body border-bottom py-2 app-repo-pagination-bar">
+    <div class="d-flex flex-wrap align-items-center gap-3 justify-content-start">
+      <nav aria-label="{{call .T "index.pagination_aria_top"}}">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item{{if not .PrevURL}} disabled{{end}}">
+            {{if .PrevURL}}<a class="page-link" href="{{.PrevURL}}">{{call .T "common.previous"}}</a>{{else}}<span class="page-link">{{call .T "common.previous"}}</span>{{end}}
+          </li>
+          <li class="page-item disabled"><span class="page-link">{{call .T "common.page"}} {{.Page}}</span></li>
+          <li class="page-item{{if not .NextURL}} disabled{{end}}">
+            {{if .NextURL}}<a class="page-link" href="{{.NextURL}}">{{call .T "common.next"}}</a>{{else}}<span class="page-link">{{call .T "common.next"}}</span>{{end}}
+          </li>
+        </ul>
+      </nav>
+      <p class="text-muted small mb-0">{{.ShowingLine}}</p>
+    </div>
+  </div>
+  {{end}}
+</div>
+
 {{if .Featured}}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3" data-gghstats-role="featured-sort-toolbar">
+  <span class="text-uppercase text-muted small fw-semibold">{{call .T "featured.sort_by"}}</span>
+  <a href="{{.SortOrderURL}}" class="text-decoration-none text-body">{{call .T "featured.sort_order"}}{{if eq .Sort "sort"}} {{if eq .Dir "desc"}}↓{{else}}↑{{end}}{{end}}</a>
+  <a href="{{.SortNameURL}}" class="text-decoration-none text-body">{{call .T "featured.sort_name"}}{{if eq .Sort "name"}} {{if eq .Dir "desc"}}↓{{else}}↑{{end}}{{end}}</a>
+  <a href="{{.SortStarsURL}}" class="text-decoration-none text-body">{{call .T "featured.sort_stars"}}{{if eq .Sort "stars"}} {{if eq .Dir "desc"}}↓{{else}}↑{{end}}{{end}}</a>
+</div>
 <div class="row g-3" data-gghstats-role="featured-grid">
   {{range .Featured}}
   <div class="col-12 col-md-6 col-xl-4">
@@ -37,6 +78,26 @@
   </div>
   {{end}}
 </div>
+{{if and .Featured (gt .Total .PerPage)}}
+<div class="card shadow-sm border-0 mt-3">
+  <div class="card-body py-2 app-repo-pagination-bar">
+    <div class="d-flex flex-wrap align-items-center gap-3 justify-content-start">
+      <nav aria-label="{{call .T "index.pagination_aria_bottom"}}">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item{{if not .PrevURL}} disabled{{end}}">
+            {{if .PrevURL}}<a class="page-link" href="{{.PrevURL}}">{{call .T "common.previous"}}</a>{{else}}<span class="page-link">{{call .T "common.previous"}}</span>{{end}}
+          </li>
+          <li class="page-item disabled"><span class="page-link">{{call .T "common.page"}} {{.Page}}</span></li>
+          <li class="page-item{{if not .NextURL}} disabled{{end}}">
+            {{if .NextURL}}<a class="page-link" href="{{.NextURL}}">{{call .T "common.next"}}</a>{{else}}<span class="page-link">{{call .T "common.next"}}</span>{{end}}
+          </li>
+        </ul>
+      </nav>
+      <p class="text-muted small mb-0">{{.ShowingLine}}</p>
+    </div>
+  </div>
+</div>
+{{end}}
 {{else}}
 <div class="card shadow-sm border-0">
   <div class="card-body text-center text-muted py-5" data-gghstats-role="featured-empty">

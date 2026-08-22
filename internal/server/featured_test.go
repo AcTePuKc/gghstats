@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -147,4 +148,84 @@ func TestFeaturedPageCompactNumbers(t *testing.T) {
 	if strings.Contains(body, "15,000") {
 		t.Errorf("compact mode must not render thousands separators (15,000)")
 	}
+}
+
+// With enough entries, /featured paginates: query params page/per_page select a
+// slice, and the page renders search + sort + pagination controls.
+func TestFeaturedPagePagination(t *testing.T) {
+	db := testStore(t)
+	for i := 0; i < 30; i++ {
+		name := fmt.Sprintf("owner/repo-%02d", i)
+		if err := db.AddFeatured(name); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.UpsertFeaturedMeta(name, "", name, "desc", i, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	h := New(Config{Store: db})
+
+	// page 1 default (per_page=25) → shows first 25, total 30
+	req := httptest.NewRequest(http.MethodGet, "/featured", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `data-gghstats-role="featured-sort-toolbar"`) {
+		t.Error("expected sort toolbar in featured page")
+	}
+	if !strings.Contains(body, "Showing 1–25 of 30") {
+		t.Errorf("expected showing line 1–25 of 30, got: %s", extractShowing(body))
+	}
+	if !strings.Contains(body, "owner/repo-00") {
+		t.Error("page 1 should include owner/repo-00")
+	}
+
+	// page 2 (per_page=25) → items 26–30 only
+	req = httptest.NewRequest(http.MethodGet, "/featured?page=2&per_page=25", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body = w.Body.String()
+	if !strings.Contains(body, "Showing 26–30 of 30") {
+		t.Errorf("expected showing line 26–30 of 30, got: %s", extractShowing(body))
+	}
+	if strings.Contains(body, "owner/repo-00") {
+		t.Error("page 2 must not include owner/repo-00")
+	}
+	if !strings.Contains(body, "owner/repo-25") {
+		t.Error("page 2 should include owner/repo-25")
+	}
+
+	// search filters the catalog before pagination
+	req = httptest.NewRequest(http.MethodGet, "/featured?q=repo-29", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body = w.Body.String()
+	if !strings.Contains(body, "owner/repo-29") {
+		t.Error("search should surface owner/repo-29")
+	}
+	if strings.Contains(body, "owner/repo-00") {
+		t.Error("search narrowed to repo-29 must not include owner/repo-00")
+	}
+}
+
+func extractShowing(body string) string {
+	i := strings.Index(body, "Showing ")
+	if i < 0 {
+		return ""
+	}
+	j := strings.Index(body[i:], "</p>")
+	if j < 0 {
+		return body[i:]
+	}
+	return body[i : i+j]
 }

@@ -181,7 +181,11 @@
     "stars": "{{count}} estrelas",
     "view_on_github": "Ver no GitHub",
     "parent_label": "Fork de",
-    "updated_at": "Metadados atualizados {{when}}"
+    "updated_at": "Metadados atualizados {{when}}",
+    "sort_by": "Ordenar por",
+    "sort_order": "Ordem",
+    "sort_name": "Nome",
+    "sort_stars": "Estrelas"
   },
   "js": {
     "syncing_all": "Sincronizando todos os repositórios…",
