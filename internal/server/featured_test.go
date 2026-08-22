@@ -91,6 +91,15 @@ func TestFeaturedPageShell(t *testing.T) {
 	if !strings.Contains(body, "15000") {
 		t.Error("expected upstream stars in featured page")
 	}
+	// The card title/link must be an external GitHub URL, not an internal route
+	// (https://github.com/{upstream_full_name}). Regression: an earlier draft
+	// linked to href="/{name}", which 404s on the dashboard.
+	if !strings.Contains(body, `href="https://github.com/matiassingers/awesome-readme"`) {
+		t.Error("expected card title/link to point to https://github.com/<upstream>")
+	}
+	if strings.Contains(body, `href="/matiassingers/awesome-readme"`) {
+		t.Error("card title must not link to an internal route")
+	}
 }
 
 // The /featured page renders a friendly empty state when the showcase is empty.

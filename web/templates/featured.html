@@ -17,7 +17,7 @@
     <div class="card shadow-sm border-0 h-100" data-gghstats-role="featured-card">
       <div class="card-body d-flex flex-column">
         <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-          <a href="/{{.Name}}" class="fw-semibold text-decoration-none fs-5 text-body" data-gghstats-role="featured-name">{{.Name}}</a>
+          <a href="https://github.com/{{if .UpstreamFullName}}{{.UpstreamFullName}}{{else}}{{.Name}}{{end}}" target="_blank" rel="noopener noreferrer" class="fw-semibold text-decoration-none fs-5 text-body" data-gghstats-role="featured-name">{{if .UpstreamFullName}}{{.UpstreamFullName}}{{else}}{{.Name}}{{end}}</a>
           {{if .Fork}}{{if .ParentFullName}}<span class="badge bg-secondary-subtle text-secondary text-uppercase small" title="{{call $.T "featured.parent_label"}} {{.ParentFullName}}" data-gghstats-role="featured-fork-badge">{{call $.T "featured.parent_label"}} {{.ParentFullName}}</span>{{else}}<span class="badge bg-secondary-subtle text-secondary text-uppercase small" data-gghstats-role="featured-fork-badge">{{call $.T "repo.fork_of"}}</span>{{end}}{{end}}
         </div>
         {{if .UpstreamDescription}}
@@ -27,7 +27,7 @@
           <span class="badge bg-body-secondary text-body" data-gghstats-role="featured-stars">{{call $.Tfmt "featured.stars" (dict "count" .UpstreamStars)}}</span>
         </div>
         <div class="mt-3 d-flex align-items-center justify-content-between gap-2">
-          <a class="btn btn-outline-primary btn-sm text-uppercase small" href="https://github.com/{{.Name}}" target="_blank" rel="noopener noreferrer">{{call $.T "featured.view_on_github"}}</a>
+          <a class="btn btn-outline-primary btn-sm text-uppercase small" href="https://github.com/{{if .UpstreamFullName}}{{.UpstreamFullName}}{{else}}{{.Name}}{{end}}" target="_blank" rel="noopener noreferrer">{{call $.T "featured.view_on_github"}}</a>
           {{if .MetaUpdatedAt}}
           <span class="text-muted small" data-gghstats-role="featured-updated">{{call $.Tfmt "featured.updated_at" (dict "when" .MetaUpdatedAt)}}</span>
           {{end}}
