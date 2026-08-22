@@ -174,7 +174,7 @@
   },
   "featured": {
     "title": "Destaques",
-    "intro": "Repositórios que valem a pena, escolhidos por você. Os metadados são atualizados a cada sincronização.",
+    "intro": "Repositórios que consideramos importantes ou de interesse para você. Recomendamos que você os confira; os metadados são atualizados a cada sincronização.",
     "empty": "Ainda não há repositórios em destaque. Adicione um com:",
     "empty_cmd": "gghstats featured add owner/repo",
     "forks": "Forks",

@@ -174,7 +174,7 @@
   },
   "featured": {
     "title": "Featured",
-    "intro": "Repositories worth a look, curated by you. Metadata refreshes on each sync.",
+    "intro": "Repositories we consider important or of interest to you. We recommend reviewing them; metadata refreshes on each sync.",
     "empty": "No featured repositories yet. Add one with:",
     "empty_cmd": "gghstats featured add owner/repo",
     "forks": "Forks",

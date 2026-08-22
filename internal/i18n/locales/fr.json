@@ -174,7 +174,7 @@
   },
   "featured": {
     "title": "À la une",
-    "intro": "Des dépôts qui valent le coup d'œil, sélectionnés par vous. Les métadonnées se rafraîchissent à chaque synchronisation.",
+    "intro": "Des dépôts que nous considérons importants ou dignes d'intérêt pour vous. Nous vous recommandons de les consulter ; les métadonnées se rafraîchissent à chaque synchronisation.",
     "empty": "Aucun dépôt à la une pour l'instant. Ajoutez-en un avec :",
     "empty_cmd": "gghstats featured add owner/repo",
     "forks": "Forks",
