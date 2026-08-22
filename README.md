@@ -423,22 +423,20 @@ gghstats export --repo your-github-user/my-app --token "$GGHSTATS_GITHUB_TOKEN" 
 
 #### Catalog (pins + Featured showcase)
 
-`gghstats repo` and `gghstats featured` steward two local SQLite catalogs (no GitHub token required).
+`gghstats repo` and `gghstats featured` steward two local SQLite catalogs
+(no GitHub token required): **pins** extend `GGHSTATS_FILTER` discovery
+(`FILTER ∪ pins`), **featured** curates the `/featured` showcase without
+touching `/` KPIs.
 
 ```bash
-gghstats repo add hrodrig/extra-one     # pin a repo into the traffic set (FILTER ∪ pins)
-gghstats repo rm  hrodrig/extra-one     # unpin it (error if it was not pinned)
-gghstats repo ls                        # list pins
-
-gghstats featured add hrodrig/awesome-readme   # editorial showcase entry
-gghstats featured rm  hrodrig/awesome-readme   # remove it (error if absent)
-gghstats featured ls                          # list showcase entries
+gghstats repo add hrodrig/extra-one     # pin into the traffic set
+gghstats featured add hrodrig/awesome-readme   # showcase on /featured
+gghstats repo ls && gghstats featured ls
 ```
 
-- **Pins** (`repo add`) extend `GGHSTATS_FILTER` discovery: the pinned repo gets traffic sync and a row on `/`. A pin **overrides** an exclusion (`repo add` of a fork while `FILTER` has `!fork` puts it on `/` — that is the point).
-- **Featured** (`featured add`) is editorial: those repos get a card on **`/featured`** with upstream description and stars, refreshed on sync **without** traffic calls — they do **not** appear on `/`.
-- `GGHSTATS_FILTER` is not removed or redefined. Pins/featured are the curated alternatives to stuffing dozens of one-off names into a single `FILTER` expression.
-- An empty `featured` catalog hides the **Featured** nav link (no empty page in the default chrome). The sidebar shows **Repositories → H2H → Featured** only when at least one showcase entry exists.
+Full reference — semantics, `--db`/`GGHSTATS_DB`, metadata sync, nav
+hide-when-empty, and troubleshooting — lives in
+**[`docs/catalog-and-featured.md`](docs/catalog-and-featured.md)**.
 
 [Back to top](#gghstats)
 

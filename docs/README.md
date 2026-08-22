@@ -8,6 +8,7 @@ Working notes and assets that support the product docs at the repository root.
 | [SPEC.md](../SPEC.md) | Normative product behavior (API, sync, CLI, alerts, …) — **what** and **how** |
 | [CHANGELOG.md](../CHANGELOG.md) | Release notes (Keep a Changelog) |
 | [README.md](../README.md) | Operator-facing install and usage |
+| [catalog-and-featured.md](catalog-and-featured.md) | Operator reference: `repo` pins + `featured` showcase (v1.1.0+) |
 | `docs/plan-v*.md` | Band plans — **what we will implement** this band (scope, order, exit, checklist) |
 
 ## Release-band plans
