@@ -1,6 +1,6 @@
 # gghstats
 
-[![Version](https://img.shields.io/badge/version-1.0.1-blue)](https://github.com/hrodrig/gghstats/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/hrodrig/gghstats/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/gghstats)](https://github.com/hrodrig/gghstats/releases)
 [![CI](https://github.com/hrodrig/gghstats/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/gghstats/actions)
 [![codecov](https://codecov.io/gh/hrodrig/gghstats/graph/badge.svg)](https://codecov.io/gh/hrodrig/gghstats)
@@ -115,7 +115,7 @@ All labels are a **snapshot (checked 2026-07-27)** — re-verify upstream stars,
 | | **gghstats** | [ghstats](https://github.com/vladkens/ghstats) | [git-clone-stats](https://github.com/taylorwilsdon/git-clone-stats) |
 |--|--------------|------------------------------------------------|---------------------------------------------------------------------|
 | Runtime | Go 1.26, single binary | Rust, single binary | Python (PyPI / uv) |
-| Release | **1.0.1** | ~0.9.0 (Jun 2026) | ~1.0.6 (~Aug 2025) |
+| Release | **1.1.0** | ~0.9.0 (Jun 2026) | ~1.0.6 (~Aug 2025) |
 | GitHub stars (approx.) | ~5 | ~180 | ~24 |
 | Storage | SQLite | SQLite | SQLite or Firestore |
 | Container image | distroless nonroot, multi-arch | ~20 MB, non-root | ~150 MB, non-root (check upstream) |
