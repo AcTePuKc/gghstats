@@ -2,6 +2,7 @@
   "nav": {
     "language": "Langue",
     "repositories": "Dépôts",
+    "featured": "À la une",
     "h2h": "H2H",
     "menu": "Menu",
     "open_nav": "Ouvrir la navigation",
@@ -31,6 +32,7 @@
     "h2h_compare": "Comparaison tête-à-tête de {{repoA}} vs {{repoB}} sur gghstats.",
     "repo": "Historique de trafic et métriques pour {{repo}} : vues, clones, référents et étoiles.",
     "repo_generic": "Métriques de trafic de dépôt GitHub sur gghstats.",
+    "featured": "Liste organisée de dépôts à la une sur gghstats.",
     "not_found": "Page introuvable sur cette instance gghstats."
   },
   "layout": {
@@ -169,6 +171,17 @@
     "repo_detail": "Ce dépôt n'est pas dans la base. Vérifiez le nom ou synchronisez-le d'abord.",
     "back": "Retour aux dépôts",
     "err_code": "ERR_NOT_FOUND"
+  },
+  "featured": {
+    "title": "À la une",
+    "intro": "Des dépôts qui valent le coup d'œil, sélectionnés par vous. Les métadonnées se rafraîchissent à chaque synchronisation.",
+    "empty": "Aucun dépôt à la une pour l'instant. Ajoutez-en un avec :",
+    "empty_cmd": "gghstats featured add owner/repo",
+    "forks": "Forks",
+    "stars": "{{count}} étoiles",
+    "view_on_github": "Voir sur GitHub",
+    "parent_label": "Fork de",
+    "updated_at": "Métadonnées actualisées {{when}}"
   },
   "js": {
     "syncing_all": "Synchronisation de tous les dépôts…",

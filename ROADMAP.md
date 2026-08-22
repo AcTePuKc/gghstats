@@ -14,6 +14,7 @@ Detailed band plans (scope, exit criteria, checklist):
 | **0.10.x** | [docs/plan-v0.10.x.md](docs/plan-v0.10.x.md) |
 | **0.11.x** | [docs/plan-v0.11.x.md](docs/plan-v0.11.x.md) |
 | **1.0.0** | [docs/plan-v1.0.0.md](docs/plan-v1.0.0.md) |
+| **1.1.0** | [docs/plan-v1.1.0.md](docs/plan-v1.1.0.md) |
 
 ## Principles
 
@@ -29,9 +30,10 @@ Detailed band plans (scope, exit criteria, checklist):
 | Line | What | Effort | Why |
 |------|------|--------|-----|
 | **A** | **Trending / velocity on repo page** + optional **alerts** (clone/view drop + ops + star milestones + SMTP) | M | Momentum **0.9**; alerts **0.10** (Slack/webhook/Loki) + milestones/SMTP in **v0.10.1** ([SPEC §8](SPEC.md)). Thin leaderboard → later / Line C. |
-| **B** | **Webhooks + delta-oriented sync**; GraphQL where it cuts REST pagination | M–L | Less polling; large accounts hit REST rate limits. Prefer **1.1+** (not 0.11). |
+| **B** | **Webhooks + delta-oriented sync**; GraphQL where it cuts REST pagination | M–L | Less polling; large accounts hit REST rate limits. Prefer **2.0.0** (not 1.1.0). |
 | **C** | **Multi-repo analytics** (leaderboards, org rollups) | M | Reuse H2H scoring; expose rankings / rollups. Deferred past **0.11**. |
 | **D** | **API-only mode** + JSON dogfood for official UI reads | M | **0.11.x** primary. Same binary; HTML optional. External React/Svelte/etc. against documented `/api/v1`. Not an in-tree SPA. |
+| **E** | **Repo pins CLI** + **Featured** showcase (editorial vitrine, not groups on `/`) | M | **v1.1.0**. FILTER stays; empty catalog = identical 1.0 UX. CLI is how you live on the VPS (add/rm/sync/backup) — dashboard shows, console stewards. Design: [2026-08-14-featured-and-repo-cli-design.md](docs/superpowers/specs/2026-08-14-featured-and-repo-cli-design.md). |
 
 ### Sync efficiency (feeds B)
 
@@ -47,21 +49,37 @@ Detailed band plans (scope, exit criteria, checklist):
 0.10.x → stars incremental + alerts + XDG prep  → docs/plan-v0.10.x.md
 0.11.x → API-only + dogfood JSON + CSP Report-Only → docs/plan-v0.11.x.md
 1.0.0  → defaults + API freeze + packaging      → docs/plan-v1.0.0.md
-1.x+   → Line B/C leftovers; non-goals intact
+1.0.x  → patches on 1.0.1 (1.0.2, 1.0.3, …)
+1.1.0  → pins CLI ∪ FILTER + Featured page      → docs/plan-v1.1.0.md
+1.1.x  → SemVer patches after 1.1.0 is tagged (1.1.1, …)
+2.0.0  → Line B (webhooks / serious ROADMAP) — not Featured
 ```
 
 | Band | Goal | Must land | Defer |
 |------|------|-----------|--------|
 | **0.9.x** | Raw data → insights; zero-friction try-out | Trends on repo page; backup **or** demo; README comparison; selected quick wins | Webhooks (B); heavy alerts; API-only |
 | **0.10.x** | Cheaper sync; usable ops signals | Incremental stars; opt-in alerts (A2); XDG prep (docs/flag); leftover QW in plan; **SEC1–SEC2** in **v0.10.2** | Full GraphQL rewrite |
-| **0.11.x** | Bring-your-own frontend (still named gghstats) | API-only mode; JSON dogfood (official UI reads); CORS/auth + contract test; **SEC3** CSP phased | In-tree SPA; GitHub App; webhooks (**1.1+**); leaderboard; HSTS/SSRF |
+| **0.11.x** | Bring-your-own frontend (still named gghstats) | API-only mode; JSON dogfood (official UI reads); CORS/auth + contract test; **SEC3** CSP phased | In-tree SPA; GitHub App; webhooks (**2.0.0**); leaderboard; HSTS/SSRF |
 | **1.0.0** | Safe to depend | Sensible default DB path; SPEC freeze (incl. API-only); packaging parity; `release-check`; Line A done | Large new features |
+| **1.1.0** | Catalog without breaking 1.0 | `repo` pins ∪ FILTER; Featured HTML + CLI; nav hidden if empty | Groups on `/`; Featured JSON; Line B |
 
-**Risk rule:** do **not** block 1.0 on Line B. Prefer 1.0 = A + incremental stars + defaults + **API-only if 0.11 landed**; finish B in **1.1+**.
+**Risk rule:** do **not** block 1.0 on Line B. Prefer 1.0 = A + incremental stars + defaults + **API-only if 0.11 landed**; finish B in **2.0.0** (serious ROADMAP). Line E is **1.1.0** (additive, opt-in).
 
-## Next (after 0.11)
+## Versioning (SemVer)
 
-**0.11.x closed** (**v0.11.0**). Active band: [plan-v1.0.0.md](docs/plan-v1.0.0.md) — stable default DB path, SPEC freeze, packaging parity.
+Current release **1.0.1**. Patch = third digit of the **current** minor.
+
+| Form | Examples | Meaning |
+|------|----------|---------|
+| Patch | `1.0.2`, `1.0.3`, `1.0.4`, … (`1.0.x`) | Small corrections on 1.0.1. No features. |
+| Minor | `1.1.0`, then `1.2.0`, … | Add or remove **without** breaking the 1.x contract |
+| Major | `2.0.0`, … | Serious product moment and/or ROADMAP-expected (e.g. Line B). Not required to break HTTP. |
+
+Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). Do not use `1.1.x` for fixes while HEAD is still 1.0.1.
+
+## Next (after 1.0)
+
+**1.0.x** patches as needed. Active feature band: [plan-v1.1.0.md](docs/plan-v1.1.0.md) (Line E). After 1.1.0: **1.2.0** unique-cloners visibility (index + repo) + Featured JSON. Line B waits for **2.0.0**.
 
 ## Explicit non-goals (this repo)
 
@@ -74,4 +92,4 @@ Detailed band plans (scope, exit criteria, checklist):
 
 ## How to propose work
 
-Open an issue or PR against **`develop`**. Large ideas: describe the problem and fit to principles / band plans before coding. Prefer extending Line A–C over new product lines.
+Open an issue or PR against **`develop`**. Large ideas: describe the problem and fit to principles / band plans before coding. Line E is **1.1.0**; further new lines need a band plan.

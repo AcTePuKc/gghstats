@@ -2,6 +2,7 @@
   "nav": {
     "language": "Idioma",
     "repositories": "Repositorios",
+    "featured": "Destacados",
     "h2h": "H2H",
     "menu": "Menú",
     "open_nav": "Abrir navegación",
@@ -31,6 +32,7 @@
     "h2h_compare": "Comparación cara a cara de {{repoA}} frente a {{repoB}} en gghstats.",
     "repo": "Historial de tráfico y métricas de {{repo}}: vistas, clones, referentes y estrellas.",
     "repo_generic": "Métricas de tráfico de repositorios GitHub en gghstats.",
+    "featured": "Lista curada de repositorios destacados en gghstats.",
     "not_found": "Página no encontrada en esta instancia de gghstats."
   },
   "layout": {
@@ -169,6 +171,17 @@
     "repo_detail": "Este repositorio no está en la base de datos. Comprueba el nombre o sincronízalo primero.",
     "back": "Volver a repositorios",
     "err_code": "ERR_NOT_FOUND"
+  },
+  "featured": {
+    "title": "Destacados",
+    "intro": "Repositorios que merecen la pena, elegidos por ti. Los metadatos se actualizan en cada sincronización.",
+    "empty": "Aún no hay repositorios destacados. Añade uno con:",
+    "empty_cmd": "gghstats featured add owner/repo",
+    "forks": "Forks",
+    "stars": "{{count}} estrellas",
+    "view_on_github": "Ver en GitHub",
+    "parent_label": "Fork de",
+    "updated_at": "Metadatos actualizados {{when}}"
   },
   "js": {
     "syncing_all": "Sincronizando todos los repositorios…",

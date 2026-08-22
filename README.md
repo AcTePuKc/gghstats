@@ -1,18 +1,18 @@
 # gghstats
 
-![gghstats — self-hosted GitHub traffic beyond the 14-day window](assets/gghstats-poster-devto.png)
-
-[![Version](https://img.shields.io/badge/version-1.0.1-blue)](https://github.com/hrodrig/gghstats/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/hrodrig/gghstats/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/gghstats)](https://github.com/hrodrig/gghstats/releases)
 [![CI](https://github.com/hrodrig/gghstats/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/gghstats/actions)
 [![codecov](https://codecov.io/gh/hrodrig/gghstats/graph/badge.svg)](https://codecov.io/gh/hrodrig/gghstats)
 [![gghstats clones](https://gghstats.hermesrodriguez.com/api/v1/badge/hrodrig/gghstats?metric=clones)](https://gghstats.hermesrodriguez.com/hrodrig/gghstats)
-[![Go 1.26.5](https://img.shields.io/badge/go-1.26.5-00ADD8?logo=go)](https://go.dev/)
+[![Go 1.26.6](https://img.shields.io/badge/go-1.26.6-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![pkg.go.dev](https://pkg.go.dev/badge/github.com/hrodrig/gghstats)](https://pkg.go.dev/github.com/hrodrig/gghstats)
 [![deps.dev](https://img.shields.io/badge/deps.dev-go%20module-blue)](https://deps.dev/go/github.com%2Fhrodrig%2Fgghstats)
 
-**Repo:** [github.com/hrodrig/gghstats](https://github.com/hrodrig/gghstats) · **Releases:** [Releases](https://github.com/hrodrig/gghstats/releases)
+**Repo:** [github.com/hrodrig/gghstats](https://github.com/hrodrig/gghstats) · **Releases:** [GitHub Releases](https://github.com/hrodrig/gghstats/releases) · **Spec:** [SPEC.md](SPEC.md) · **Operator:** [gghstats-selfhosted](https://github.com/hrodrig/gghstats-selfhosted) · **Live:** [gghstats.hermesrodriguez.com](https://gghstats.hermesrodriguez.com) · **Changelog:** [CHANGELOG.md](CHANGELOG.md) · **Roadmap:** [ROADMAP.md](ROADMAP.md)
+
+![gghstats — self-hosted GitHub traffic beyond the 14-day window](assets/gghstats-poster-devto.png)
 
 Self-hosted dashboard and CLI for GitHub repository traffic stats. GitHub only keeps traffic for 14 days; `gghstats` keeps historical data indefinitely in SQLite.
 
@@ -115,7 +115,7 @@ All labels are a **snapshot (checked 2026-07-27)** — re-verify upstream stars,
 | | **gghstats** | [ghstats](https://github.com/vladkens/ghstats) | [git-clone-stats](https://github.com/taylorwilsdon/git-clone-stats) |
 |--|--------------|------------------------------------------------|---------------------------------------------------------------------|
 | Runtime | Go 1.26, single binary | Rust, single binary | Python (PyPI / uv) |
-| Release | **1.0.1** | ~0.9.0 (Jun 2026) | ~1.0.6 (~Aug 2025) |
+| Release | **1.1.0** | ~0.9.0 (Jun 2026) | ~1.0.6 (~Aug 2025) |
 | GitHub stars (approx.) | ~5 | ~180 | ~24 |
 | Storage | SQLite | SQLite | SQLite or Firestore |
 | Container image | distroless nonroot, multi-arch | ~20 MB, non-root | ~150 MB, non-root (check upstream) |
@@ -420,6 +420,23 @@ gghstats fetch --repo your-github-user/my-app --token "$GGHSTATS_GITHUB_TOKEN"
 gghstats report --repo your-github-user/my-app --token "$GGHSTATS_GITHUB_TOKEN"
 gghstats export --repo your-github-user/my-app --token "$GGHSTATS_GITHUB_TOKEN" --output traffic.csv
 ```
+
+#### Catalog (pins + Featured showcase)
+
+`gghstats repo` and `gghstats featured` steward two local SQLite catalogs
+(no GitHub token required): **pins** extend `GGHSTATS_FILTER` discovery
+(`FILTER ∪ pins`), **featured** curates the `/featured` showcase without
+touching `/` KPIs.
+
+```bash
+gghstats repo add hrodrig/extra-one     # pin into the traffic set
+gghstats featured add hrodrig/awesome-readme   # showcase on /featured
+gghstats repo ls && gghstats featured ls
+```
+
+Full reference — semantics, `--db`/`GGHSTATS_DB`, metadata sync, nav
+hide-when-empty, and troubleshooting — lives in
+**[`docs/catalog-and-featured.md`](docs/catalog-and-featured.md)**.
 
 [Back to top](#gghstats)
 

@@ -1,5 +1,5 @@
 .\" Man page for gghstats(1)
-.TH GGHSTATS 1 "July 2026" "gghstats v1.0.1" "User Commands"
+.TH GGHSTATS 1 "August 2026" "gghstats v1.1.0" "User Commands"
 .SH NAME
 gghstats \- self-hosted GitHub repository traffic dashboard and CLI
 .SH SYNOPSIS
@@ -63,8 +63,35 @@ Send a synthetic alert to configured sinks
 Optional \fB\-\-kind traffic|ops\fR and \fB\-\-sink slack|webhook|loki|smtp\fR.
 Exit \fB4\fR if delivery fails. See SPEC §8.8.
 .TP
+.B repo
+Steward dashboard pins: \fBrepo add\fR / \fBrepo rm\fR / \fBrepo ls\fR
+(v1.1.0+). Pins join \fBGGHSTATS_FILTER\fR as the traffic sync and \fB/\fR
+table set (union). No GitHub token required; add/rm/ls are local SQLite ops.
+.TP
+.B featured
+Curate the Featured showcase: \fBfeatured add\fR / \fBfeatured rm\fR /
+\fBfeatured ls\fR (v1.1.0+). Featured repos are editorial and do \fBnot\fR
+appear in the traffic dashboard; metadata (description, stars) refreshes on
+sync without traffic calls. No GitHub token required.
+.TP
 .B version
 Print build version information.
+.SH CATALOG FLAGS
+(\fBrepo\fR, \fBfeatured\fR)
+.TP
+.B add OWNER/REPO
+Pin (\fBrepo\fR) or showcase (\fBfeatured\fR) a repository. Idempotent.
+.TP
+.B rm OWNER/REPO
+Remove a pin/showcase entry. Error (exit 1) if missing.
+.TP
+.B ls
+List entries, one \fIowner/repo\fR per line, in insertion order.
+.TP
+.BR \-\-db ", " PATH
+SQLite database path (same as \fBserve\fR; \fBGGHSTATS_DB\fR or platform default).
+Names must match \fBOWNER/REPO\fR (\fB[A-Za-z0-9_.-]+\fR on each side); \fB*\fR
+and FILTER syntax are rejected.
 .SH CLI FLAGS
 (fetch, report, export, backup, restore, alert test)
 .TP

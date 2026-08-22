@@ -32,7 +32,7 @@ func Run(gh *github.Client, db *store.Store, opts Options, rec ErrRecorder) (Run
 		result.RateLimitRemaining = gh.LastRateLimitRemaining()
 	}
 
-	repos, err := resolveRepos(gh, opts)
+	repos, err := resolveTracked(gh, db, opts)
 	if err != nil {
 		result.Unreachable = isUnreachableErr(err)
 		result.Success = false
@@ -65,6 +65,12 @@ func Run(gh *github.Client, db *store.Store, opts Options, rec ErrRecorder) (Run
 
 	if err := db.UpdateDeltasSince(today); err != nil {
 		slog.Error("update deltas failed", "error", err)
+	}
+
+	if gh != nil {
+		if err := syncFeaturedMeta(gh, db); err != nil {
+			slog.Warn("featured metadata sync failed", "error", err)
+		}
 	}
 
 	slog.Info("sync completed", "repos", len(repos), "failed", result.ReposFailed)

@@ -7,6 +7,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-22
+
+### Added
+
+- **Catalog CLI** (`repo`, `featured`): `add`/`rm`/`ls` steward two local SQLite catalogs without a GitHub token. `repo add` unions a pin into the traffic set (`GGHSTATS_FILTER ∪ pins`); `featured add` curates editorial showcase entries that do not appear on `/`.
+- **Pins + Featured schema** (migration **v6**): `pins` and `featured` tables; existing `repos` traffic rows unchanged.
+- **Featured showcase page** (`/featured`): neo-brutalist grid of cards with upstream description, star count, fork badge, and GitHub link. Metadata (description/stars) refreshes on sync without traffic calls.
+- **Sidebar `Featured` link**: shown only when the showcase is non-empty (hidden for empty catalog and in `GGHSTATS_API_ONLY`); i18n `nav.featured`/`meta.featured` for en/es/de/fr/pt-br.
+
 ## [1.0.1] - 2026-07-31
 
 ### Changed
@@ -556,7 +565,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/hrodrig/gghstats/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/hrodrig/gghstats/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/hrodrig/gghstats/compare/v0.11.0...v1.0.0
 [0.11.0]: https://github.com/hrodrig/gghstats/compare/v0.10.2...v0.11.0
