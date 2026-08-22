@@ -38,6 +38,16 @@ Alert smoke-test:
   gghstats alert test [--kind traffic|ops] [--sink slack|webhook|loki|smtp]
                        Uses GGHSTATS_ALERT_SINKS (ENABLED not required). Exit 4 on delivery failure.
 
+Catalog (gghstats repo / gghstats featured — local SQLite, no GitHub token):
+  repo add OWNER/REPO     Pin a repo to the dashboard (FILTER ∪ pins)
+  repo rm  OWNER/REPO     Unpin a repo (error if not pinned)
+  repo ls                 List pinned repos
+  featured add OWNER/REPO Add a repo to the Featured showcase (editorial; not on /)
+  featured rm  OWNER/REPO Remove from the showcase (error if not present)
+  featured ls             List showcase entries
+  --db PATH               SQLite path (GGHSTATS_DB or platform default)
+                          Names must be OWNER/REPO (letters/digits/._-); * and FILTER rejected.
+
 Server (gghstats serve or gghstats run):
   --port PORT              Listen port (overrides GGHSTATS_PORT; default 8080)
   --open                   Open the default browser when the server is ready
