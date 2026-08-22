@@ -59,63 +59,79 @@ func TestPinCRUD(t *testing.T) {
 func TestFeaturedCRUD(t *testing.T) {
 	s := tempDB(t)
 
+	// list empty
+	checkFeaturedList(t, s, nil)
+
+	// add (idempotent duplicate is fine)
+	mustAddFeatured(t, s, "owner/one")
+	mustAddFeatured(t, s, "owner/two")
+	mustAddFeatured(t, s, "owner/one")
+	checkFeaturedList(t, s, []string{"owner/one", "owner/two"})
+
+	// metadata update
+	mustUpsertMeta(t, s, "owner/one")
+	checkFeaturedMeta(t, s, "owner/one")
+
+	// remove
+	checkFeaturedRemove(t, s, "owner/one")
+}
+
+func checkFeaturedList(t *testing.T, s *Store, want []string) {
+	t.Helper()
 	f, err := s.ListFeatured()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(f) != 0 {
-		t.Fatalf("ListFeatured empty = %d, want 0", len(f))
+	if len(f) != len(want) {
+		t.Fatalf("ListFeatured = %d rows, want %d", len(f), len(want))
 	}
+	for i, name := range want {
+		if f[i].Name != name {
+			t.Fatalf("order[%d] = %q, want %q", i, f[i].Name, name)
+		}
+	}
+}
 
-	// add (idempotent)
-	if err := s.AddFeatured("owner/one"); err != nil {
+func mustAddFeatured(t *testing.T, s *Store, name string) {
+	t.Helper()
+	if err := s.AddFeatured(name); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.AddFeatured("owner/two"); err != nil {
+}
+
+func mustUpsertMeta(t *testing.T, s *Store, name string) {
+	t.Helper()
+	if err := s.UpsertFeaturedMeta(name, "", "up/one", "desc", 42, true); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.AddFeatured("owner/one"); err != nil {
-		t.Fatal(err)
-	}
-	f, err = s.ListFeatured()
+}
+
+func checkFeaturedMeta(t *testing.T, s *Store, name string) {
+	t.Helper()
+	f, err := s.ListFeatured()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(f) != 2 {
-		t.Fatalf("ListFeatured = %d, want 2", len(f))
-	}
-
-	// sort is ascending insertion order (owner/one before owner/two)
-	if f[0].Name != "owner/one" || f[1].Name != "owner/two" {
-		t.Fatalf("sort order = %v, want [owner/one owner/two]", []string{f[0].Name, f[1].Name})
-	}
-
-	// metadata update
-	if err := s.UpsertFeaturedMeta("owner/one", "", "up/one", "desc", 42, true); err != nil {
-		t.Fatal(err)
-	}
-	f, _ = s.ListFeatured()
 	var got *Featured
 	for i := range f {
-		if f[i].Name == "owner/one" {
+		if f[i].Name == name {
 			got = &f[i]
 		}
 	}
 	if got == nil {
-		t.Fatal("owner/one missing after meta")
+		t.Fatalf("%s missing after meta", name)
 	}
 	if got.UpstreamFullName != "up/one" || got.UpstreamDescription != "desc" || got.UpstreamStars != 42 || !got.Fork {
 		t.Fatalf("meta = %+v, want upstream=up/one desc stars=42 fork=true", got)
 	}
+}
 
-	// remove
-	if rem, err := s.RemoveFeatured("owner/one"); err != nil || !rem {
-		t.Fatalf("RemoveFeatured = %v, %v", rem, err)
+func checkFeaturedRemove(t *testing.T, s *Store, name string) {
+	t.Helper()
+	if rem, err := s.RemoveFeatured(name); err != nil || !rem {
+		t.Fatalf("RemoveFeatured(%s) = %v, %v", name, rem, err)
 	}
-	f, _ = s.ListFeatured()
-	if len(f) != 1 || f[0].Name != "owner/two" {
-		t.Fatalf("after rm: %v, want [owner/two]", f)
-	}
+	checkFeaturedList(t, s, []string{"owner/two"})
 	if rem, err := s.RemoveFeatured("nope/nope"); err != nil || rem {
 		t.Fatalf("RemoveFeatured missing = %v, %v", rem, err)
 	}

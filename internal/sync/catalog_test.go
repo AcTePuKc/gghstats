@@ -152,35 +152,43 @@ func TestSyncFeaturedMeta(t *testing.T) {
 		byName[f.Name] = f
 	}
 
-	fork := byName["hrodrig/awesome-readme"]
-	if !fork.Fork {
-		t.Errorf("fork entry: Fork=false")
-	}
-	if fork.UpstreamFullName != "matiassingers/awesome-readme" {
-		t.Errorf("fork upstream = %q, want matiassingers/awesome-readme", fork.UpstreamFullName)
-	}
-	if fork.ParentFullName != "matiassingers/awesome-readme" {
-		t.Errorf("fork parent = %q", fork.ParentFullName)
-	}
-	if fork.UpstreamStars != 15000 {
-		t.Errorf("fork upstream stars = %d, want 15000", fork.UpstreamStars)
-	}
-	if fork.UpstreamDescription != "A curated list of awesome readmes" {
-		t.Errorf("fork upstream desc = %q", fork.UpstreamDescription)
-	}
-
-	plain := byName["hrodrig/plain"]
-	if plain.Fork {
-		t.Errorf("plain entry: Fork=true")
-	}
-	if plain.UpstreamFullName != "hrodrig/plain" {
-		t.Errorf("plain upstream = %q, want hrodrig/plain", plain.UpstreamFullName)
-	}
-	if plain.UpstreamStars != 42 {
-		t.Errorf("plain stars = %d, want 42", plain.UpstreamStars)
-	}
+	checkFeaturedEntry(t, byName["hrodrig/awesome-readme"], featuredWant{
+		fork: true, upstream: "matiassingers/awesome-readme",
+		parent: "matiassingers/awesome-readme", stars: 15000,
+		desc: "A curated list of awesome readmes",
+	})
+	checkFeaturedEntry(t, byName["hrodrig/plain"], featuredWant{
+		fork: false, upstream: "hrodrig/plain", stars: 42,
+	})
 
 	if hitTraffic {
 		t.Errorf("featured metadata sync hit /traffic/* (R11 violation)")
+	}
+}
+
+type featuredWant struct {
+	fork     bool
+	upstream string
+	parent   string
+	stars    int
+	desc     string
+}
+
+func checkFeaturedEntry(t *testing.T, f store.Featured, want featuredWant) {
+	t.Helper()
+	if f.Fork != want.fork {
+		t.Errorf("entry %q: Fork=%v, want %v", f.Name, f.Fork, want.fork)
+	}
+	if want.upstream != "" && f.UpstreamFullName != want.upstream {
+		t.Errorf("entry %q: upstream = %q, want %q", f.Name, f.UpstreamFullName, want.upstream)
+	}
+	if want.parent != "" && f.ParentFullName != want.parent {
+		t.Errorf("entry %q: parent = %q, want %q", f.Name, f.ParentFullName, want.parent)
+	}
+	if want.stars != 0 && f.UpstreamStars != want.stars {
+		t.Errorf("entry %q: stars = %d, want %d", f.Name, f.UpstreamStars, want.stars)
+	}
+	if want.desc != "" && f.UpstreamDescription != want.desc {
+		t.Errorf("entry %q: desc = %q, want %q", f.Name, f.UpstreamDescription, want.desc)
 	}
 }
