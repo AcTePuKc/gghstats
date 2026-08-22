@@ -191,6 +191,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	repoHandler := handleRepoPage(cfg, cfg.Store, tmpl)
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
+	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
 	htmlNotFound := func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		if strings.HasPrefix(path, "/api/") {
@@ -391,6 +392,8 @@ type layoutData struct {
 	SyncUIEnabled bool
 	// SyncScopeRepo when set scopes the sidebar sync to this owner/repo (repo detail pages).
 	SyncScopeRepo string
+	// ShowFeatured shows the "Featured" nav link (hidden when the showcase is empty).
+	ShowFeatured bool
 	// CanonicalURL is the preferred indexing URL (no lang/sort/pagination params on index).
 	CanonicalURL    template.URL
 	MetaDescription string
@@ -887,6 +890,11 @@ func renderLayoutStatus(w http.ResponseWriter, r *http.Request, tmpl *template.T
 	}
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		data.SyncUIEnabled = true
+	}
+	if cfg.Store != nil {
+		if n, err := cfg.Store.FeaturedCount(); err == nil && n > 0 {
+			data.ShowFeatured = true
+		}
 	}
 	data = fillLayoutDefaults(data)
 	data = applyLayoutSEO(r, cfg, data)

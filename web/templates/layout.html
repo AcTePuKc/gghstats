@@ -57,6 +57,7 @@
         </div>
         <nav class="nav flex-column px-2 py-4 gap-1 flex-grow-1" aria-label="Main navigation" data-gghstats-role="nav">
           <a class="nav-link app-brutal-nav px-3 py-2 text-uppercase fw-semibold small{{if or (eq .PageID "index") (eq .PageID "repo")}} active{{end}}" href="/" title="{{call .T "nav.repositories"}}">{{call .T "nav.repositories"}}</a>
+          {{if .ShowFeatured}}<a class="nav-link app-brutal-nav px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "featured"}} active{{end}}" href="/featured" title="{{call .T "featured.title"}}">{{call .T "nav.featured"}}</a>{{end}}
           <a class="nav-link app-brutal-nav px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "h2h"}} active{{end}}" href="/h2h" title="{{call .T "h2h.title"}}">{{call .T "nav.h2h"}}</a>
         </nav>
         {{if .LocaleLinks}}

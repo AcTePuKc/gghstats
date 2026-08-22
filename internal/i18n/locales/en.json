@@ -2,6 +2,7 @@
   "nav": {
     "language": "Language",
     "repositories": "Repositories",
+    "featured": "Featured",
     "h2h": "H2H",
     "menu": "Menu",
     "open_nav": "Open navigation",
@@ -31,6 +32,7 @@
     "h2h_compare": "Head-to-head comparison of {{repoA}} vs {{repoB}} on gghstats.",
     "repo": "Traffic history and metrics for {{repo}}: views, clones, referrers, and stars.",
     "repo_generic": "GitHub repository traffic metrics on gghstats.",
+    "featured": "Curated list of featured repositories on gghstats.",
     "not_found": "Page not found on this gghstats instance."
   },
   "layout": {
@@ -169,6 +171,17 @@
     "repo_detail": "This repository is not in the database. Check the name or run a sync so it is collected.",
     "back": "Back to repositories",
     "err_code": "ERR_NOT_FOUND"
+  },
+  "featured": {
+    "title": "Featured",
+    "intro": "Repositories worth a look, curated by you. Metadata refreshes on each sync.",
+    "empty": "No featured repositories yet. Add one with:",
+    "empty_cmd": "gghstats featured add owner/repo",
+    "forks": "Forks",
+    "stars": "{{count}} stars",
+    "view_on_github": "View on GitHub",
+    "parent_label": "Fork of",
+    "updated_at": "Metadata updated {{when}}"
   },
   "js": {
     "syncing_all": "Syncing all repositories…",

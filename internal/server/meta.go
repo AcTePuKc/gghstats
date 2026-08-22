@@ -67,6 +67,8 @@ func layoutMetaDescription(data layoutData, r *http.Request) string {
 			return data.Tfmt("meta.h2h_compare", map[string]string{"repoA": a, "repoB": b})
 		}
 		return data.T("meta.h2h")
+	case "featured":
+		return data.T("meta.featured")
 	case "repo":
 		owner := r.PathValue("owner")
 		repo := r.PathValue("repo")
