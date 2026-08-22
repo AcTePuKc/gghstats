@@ -23,6 +23,8 @@ Commands:
   backup   Snapshot the SQLite database (VACUUM INTO)
   restore  Replace the SQLite database from a backup file
   alert    Alert helpers (alert test = smoke-test sinks)
+  repo     Pin extra repos to the dashboard (add/rm/ls)
+  featured Curate the Featured showcase (add/rm/ls)
   version  Print version information
 
 CLI flags (fetch/report/export):
@@ -99,6 +101,8 @@ var cliCommands = map[string]cliCmd{
 	"backup":  runBackup,
 	"restore": runRestore,
 	"alert":   runAlert,
+	"repo":    runRepo,
+	"featured": runFeatured,
 }
 
 // runCLI runs the CLI and returns a process exit code (0 = success).

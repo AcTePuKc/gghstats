@@ -42,17 +42,17 @@ func TestPinCRUD(t *testing.T) {
 	}
 
 	// remove
-	if err := s.RemovePin("owner/repo"); err != nil {
-		t.Fatal(err)
+	if rem, err := s.RemovePin("owner/repo"); err != nil || !rem {
+		t.Fatalf("RemovePin = %v, %v", rem, err)
 	}
 	pins, _ = s.ListPins()
 	if len(pins) != 1 || pins[0] != "owner/other" {
 		t.Fatalf("after rm: %v, want [owner/other]", pins)
 	}
 
-	// remove missing is not an error at store level (caller decides exit code)
-	if err := s.RemovePin("nope/nope"); err != nil {
-		t.Fatalf("RemovePin missing: %v", err)
+	// remove missing reports removed=false
+	if rem, err := s.RemovePin("nope/nope"); err != nil || rem {
+		t.Fatalf("RemovePin missing = %v, %v", rem, err)
 	}
 }
 
@@ -109,14 +109,14 @@ func TestFeaturedCRUD(t *testing.T) {
 	}
 
 	// remove
-	if err := s.RemoveFeatured("owner/one"); err != nil {
-		t.Fatal(err)
+	if rem, err := s.RemoveFeatured("owner/one"); err != nil || !rem {
+		t.Fatalf("RemoveFeatured = %v, %v", rem, err)
 	}
 	f, _ = s.ListFeatured()
 	if len(f) != 1 || f[0].Name != "owner/two" {
 		t.Fatalf("after rm: %v, want [owner/two]", f)
 	}
-	if err := s.RemoveFeatured("nope/nope"); err != nil {
-		t.Fatalf("RemoveFeatured missing: %v", err)
+	if rem, err := s.RemoveFeatured("nope/nope"); err != nil || rem {
+		t.Fatalf("RemoveFeatured missing = %v, %v", rem, err)
 	}
 }

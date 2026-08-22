@@ -20,11 +20,17 @@ func (s *Store) AddPin(name string) error {
 	return err
 }
 
-// RemovePin removes a pin. Missing row is not an error (idempotent remove);
-// the CLI decides whether to surface a non-zero exit.
-func (s *Store) RemovePin(name string) error {
-	_, err := s.db.Exec(`DELETE FROM pins WHERE name=?`, name)
-	return err
+// RemovePin removes a pin and reports whether a row was actually removed.
+func (s *Store) RemovePin(name string) (bool, error) {
+	res, err := s.db.Exec(`DELETE FROM pins WHERE name=?`, name)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 // ListPins returns pinned names in insertion order.
@@ -68,10 +74,17 @@ func (s *Store) AddFeatured(name string) error {
 	return err
 }
 
-// RemoveFeatured removes a showcase entry (missing row is not an error).
-func (s *Store) RemoveFeatured(name string) error {
-	_, err := s.db.Exec(`DELETE FROM featured WHERE name=?`, name)
-	return err
+// RemoveFeatured removes a showcase entry and reports whether a row was actually removed.
+func (s *Store) RemoveFeatured(name string) (bool, error) {
+	res, err := s.db.Exec(`DELETE FROM featured WHERE name=?`, name)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 const featuredSelect = `
