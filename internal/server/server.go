@@ -194,6 +194,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	mountSEORoutes(mux, cfg)
 	repoHandler := handleRepoPage(cfg, cfg.Store, tmpl)
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
+	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg.Store))
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
 	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
 	htmlNotFound := func(w http.ResponseWriter, r *http.Request) {
@@ -388,6 +389,7 @@ type layoutData struct {
 	Breadcrumbs      []breadcrumb
 	Content          template.HTML
 	PageID           string // index, h2h, repo, not_found — sidebar active state
+	Query            string // current index search query, used by the matching JSONL export
 	LocaleLinks      []localeLink
 	JSI18n           template.JS
 	// CustomStylesheetURL is set when GGHSTATS_CUSTOM_CSS points to a valid file (safe for href).
@@ -468,17 +470,17 @@ func fillLayoutDefaults(d layoutData) layoutData {
 
 // buildIndexListClonesChartPayload returns JSON (for Chart.js) of daily clone totals across repoNames,
 // scoped to the last indexCloneChartMaxDays ending at the newest clone date in the DB.
-func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggCount int, js template.JS, err error) {
+func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggCount int, js template.JS, stats, uniqueStats *cloneStatistics, err error) {
 	js = template.JS("[]")
 	if len(repoNames) == 0 {
-		return 0, js, nil
+		return 0, js, nil, nil, nil
 	}
 	minD, maxD, ok, err := db.CloneDateExtentForRepos(repoNames)
 	if err != nil {
-		return 0, js, err
+		return 0, js, nil, nil, err
 	}
 	if !ok {
-		return 0, js, nil
+		return 0, js, nil, nil, nil
 	}
 	from := minD
 	if tMin, e1 := time.Parse("2006-01-02", minD); e1 == nil {
@@ -491,16 +493,16 @@ func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggC
 	}
 	rows, err := db.AggregatedClonesByDayForRepos(repoNames, from, maxD)
 	if err != nil {
-		return 0, js, err
+		return 0, js, nil, nil, err
 	}
 	if len(rows) == 0 {
-		return 0, js, nil
+		return 0, js, nil, nil, nil
 	}
 	b, err := json.Marshal(rows)
 	if err != nil {
-		return 0, js, err
+		return 0, js, nil, nil, err
 	}
-	return len(rows), template.JS(b), nil
+	return len(rows), template.JS(b), calculateCloneStatistics(rows), calculateUniqueCloneStatistics(rows), nil
 }
 
 func parseIndexQueryParams(r *http.Request) (sort, dir, query string, page, perPage int) {
@@ -586,68 +588,74 @@ func clampIndexPage(page, totalPages int) int {
 
 type indexTemplatePayload struct {
 	localeBinder
-	ShowingLine        string
-	Repos              []store.RepoSummary
-	Sort               string
-	Dir                string
-	Query              string
-	Page               int
-	PerPage            int
-	Total              int
-	From               int
-	To                 int
-	KPIStars           int
-	KPIForks           int
-	KPIClones          int
-	KPIViews           int
-	PrevURL            string
-	NextURL            string
-	SortNameURL        string
-	SortStarsURL       string
-	SortForksURL       string
-	SortClonesURL      string
-	SortClones1dURL    string
-	SortClones7dURL    string
-	SortClones30dURL   string
-	SortViewsURL       string
-	ListClonesAggJSON  template.JS
-	ListClonesAggCount int
+	ShowingLine          string
+	Repos                []indexRepoRow
+	Sort                 string
+	Dir                  string
+	Query                string
+	Page                 int
+	PerPage              int
+	Total                int
+	From                 int
+	To                   int
+	KPIStars             int
+	KPIForks             int
+	KPIClones            int
+	KPIViews             int
+	PrevURL              string
+	NextURL              string
+	SortNameURL          string
+	SortStarsURL         string
+	SortForksURL         string
+	SortClonesURL        string
+	SortClones1dURL      string
+	SortClones7dURL      string
+	SortClones30dURL     string
+	SortViewsURL         string
+	ListClonesAggJSON    template.JS
+	ListClonesAggCount   int
+	ListCloneStats       *cloneStatistics
+	ListUniqueCloneStats *cloneStatistics
 }
 
 func buildIndexTemplatePayload(
-	reposPage []store.RepoSummary,
+	reposPage []indexRepoRow,
 	sort, dir, query string,
 	page, perPage, total, start, end, totalPages int,
 	kpiStars, kpiForks, kpiClones, kpiViews int,
 	listClonesAggJSON template.JS,
 	listClonesAggCount int,
+	listCloneStats *cloneStatistics,
+	listUniqueCloneStats *cloneStatistics,
 ) indexTemplatePayload {
 	data := indexTemplatePayload{
-		Repos:              reposPage,
-		Sort:               sort,
-		Dir:                dir,
-		Query:              query,
-		Page:               page,
-		PerPage:            perPage,
-		Total:              total,
-		From:               start + 1,
-		To:                 end,
-		KPIStars:           kpiStars,
-		KPIForks:           kpiForks,
-		KPIClones:          kpiClones,
-		KPIViews:           kpiViews,
-		PrevURL:            buildIndexURL(sort, dir, query, page-1, perPage),
-		NextURL:            buildIndexURL(sort, dir, query, page+1, perPage),
-		SortNameURL:        buildSortURL("name", sort, dir, query, perPage),
-		SortStarsURL:       buildSortURL("stars", sort, dir, query, perPage),
-		SortForksURL:       buildSortURL("forks", sort, dir, query, perPage),
-		SortClonesURL:      buildSortURL("total_clones", sort, dir, query, perPage),
-		SortClones1dURL:    buildSortURL("clones_1d", sort, dir, query, perPage),
-		SortClones7dURL:    buildSortURL("clones_7d", sort, dir, query, perPage),
-		SortClones30dURL:   buildSortURL("clones_30d", sort, dir, query, perPage),
-		SortViewsURL:       buildSortURL("total_views", sort, dir, query, perPage),
-		ListClonesAggJSON:  listClonesAggJSON,
-		ListClonesAggCount: listClonesAggCount,
+		Repos:                reposPage,
+		Sort:                 sort,
+		Dir:                  dir,
+		Query:                query,
+		Page:                 page,
+		PerPage:              perPage,
+		Total:                total,
+		From:                 start + 1,
+		To:                   end,
+		KPIStars:             kpiStars,
+		KPIForks:             kpiForks,
+		KPIClones:            kpiClones,
+		KPIViews:             kpiViews,
+		PrevURL:              buildIndexURL(sort, dir, query, page-1, perPage),
+		NextURL:              buildIndexURL(sort, dir, query, page+1, perPage),
+		SortNameURL:          buildSortURL("name", sort, dir, query, perPage),
+		SortStarsURL:         buildSortURL("stars", sort, dir, query, perPage),
+		SortForksURL:         buildSortURL("forks", sort, dir, query, perPage),
+		SortClonesURL:        buildSortURL("total_clones", sort, dir, query, perPage),
+		SortClones1dURL:      buildSortURL("clones_1d", sort, dir, query, perPage),
+		SortClones7dURL:      buildSortURL("clones_7d", sort, dir, query, perPage),
+		SortClones30dURL:     buildSortURL("clones_30d", sort, dir, query, perPage),
+		SortViewsURL:         buildSortURL("total_views", sort, dir, query, perPage),
+		ListClonesAggJSON:    listClonesAggJSON,
+		ListClonesAggCount:   listClonesAggCount,
+		ListCloneStats:       listCloneStats,
+		ListUniqueCloneStats: listUniqueCloneStats,
 	}
 	if total == 0 {
 		data.From = 0
@@ -675,21 +683,22 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		listClonesAggCount, listClonesAggJSON, err := buildIndexListClonesChartPayload(db, repoNamesFromSummaries(repos))
+		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(db, repoNamesFromSummaries(repos))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		kpiStars, kpiForks, kpiClones, kpiViews := sumIndexKPIs(repos)
+		rankedRepos := rankIndexReposByTotalClones(repos)
 		total := len(repos)
-		start, end, reposPage := indexReposPageSlice(repos, page, perPage)
+		start, end, reposPage := indexRepoRowsPageSlice(rankedRepos, page, perPage)
 		totalPages := indexTotalPages(total, perPage)
 		page = clampIndexPage(page, totalPages)
 
 		lb := bindPageLocale(r, cfg)
 		data := buildIndexTemplatePayload(
 			reposPage, sort, dir, query, page, perPage, total, start, end, totalPages,
-			kpiStars, kpiForks, kpiClones, kpiViews, listClonesAggJSON, listClonesAggCount,
+			kpiStars, kpiForks, kpiClones, kpiViews, listClonesAggJSON, listClonesAggCount, listCloneStats, listUniqueCloneStats,
 		)
 		data.localeBinder = lb
 		data.ShowingLine = lb.Tfmt("index.showing", map[string]string{
@@ -702,6 +711,7 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 		renderLayout(w, r, tmpl, cfg, layoutData{
 			Title:   lb.T("index.title"),
 			PageID:  "index",
+			Query:   query,
 			Version: version.Version,
 			Content: content,
 		})
