@@ -80,6 +80,7 @@
         <table class="table table-hover table-striped table-bordered mb-0 align-middle">
           <thead class="table-light">
             <tr>
+              <th scope="col" class="text-end fw-semibold text-body">{{call .T "index.col_clone_rank_share"}}</th>
               <th scope="col" class="fw-semibold"><a href="{{.SortNameURL}}" class="text-decoration-none text-body">{{call .T "index.col_name"}}{{if eq .Sort "name"}} {{if eq .Dir "desc"}}↓{{else}}↑{{end}}{{end}}</a></th>
               <th scope="col" class="text-end fw-semibold"><a href="{{.SortStarsURL}}" class="text-decoration-none text-body">{{call .T "index.col_stars"}}{{if eq .Sort "stars"}} {{if eq .Dir "desc"}}↓{{else}}↑{{end}}{{end}}</a></th>
               <th scope="col" class="text-end fw-semibold"><a href="{{.SortForksURL}}" class="text-decoration-none text-body">{{call .T "index.col_forks"}}{{if eq .Sort "forks"}} {{if eq .Dir "desc"}}↓{{else}}↑{{end}}{{end}}</a></th>
@@ -93,6 +94,7 @@
           <tbody>
             {{range .Repos}}
             <tr>
+              <td class="text-end text-nowrap">{{.CloneRankOrdinal}} · {{printf "%.2f" .CloneSharePercent}}%</td>
               <td><a href="/{{.Name}}" class="fw-medium" title="{{.Name}}">{{.Name}}</a></td>
               <td class="text-end">{{call $.Num .Stars}}</td>
               <td class="text-end">{{call $.Num .Forks}}</td>
@@ -104,7 +106,7 @@
             </tr>
             {{else}}
             <tr>
-              <td colspan="8" class="text-center text-muted py-5">
+              <td colspan="9" class="text-center text-muted py-5">
                 <p class="mb-2">{{call .T "index.empty_title"}}</p>
                 <p class="small mb-0">{{call .T "index.empty_hint"}}</p>
                 <code class="d-inline-block mt-2 p-2 bg-body-secondary rounded small text-start">gghstats fetch --repo owner/repo --db ./data/gghstats.db --token $GGHSTATS_GITHUB_TOKEN</code>
@@ -140,6 +142,35 @@
       <div class="card-body border-bottom py-2 px-3">
         <p class="small text-muted mb-0">{{call .T "index.chart_blurb"}}</p>
       </div>
+      {{if and .ListCloneStats .ListUniqueCloneStats}}
+      <div class="card-body border-bottom py-3 px-3">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+          <h2 class="h6 text-uppercase text-muted fw-semibold letter-spacing-tight mb-0">{{call .T "index.stats_title"}}</h2>
+          <div class="btn-group btn-group-sm" role="group" aria-label="{{call .T "index.stats_title"}}">
+            <button type="button" class="btn btn-outline-primary active" data-gghstats-stats-selector="total" aria-pressed="true">{{call .T "chart.legend_clones_count"}}</button>
+            <button type="button" class="btn btn-outline-primary" data-gghstats-stats-selector="unique" aria-pressed="false">{{call .T "chart.legend_unique"}}</button>
+          </div>
+        </div>
+        <div class="row row-cols-2 g-2" data-gghstats-stats-panel="total">
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_mean"}}</div><div class="fw-semibold">{{.ListCloneStats.Mean}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_median"}}</div><div class="fw-semibold">{{.ListCloneStats.Median}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_variance"}}</div><div class="fw-semibold">{{.ListCloneStats.Variance}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_stddev"}}</div><div class="fw-semibold">{{.ListCloneStats.StandardDeviation}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_min"}}</div><div class="fw-semibold">{{.ListCloneStats.Minimum}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_max"}}</div><div class="fw-semibold">{{.ListCloneStats.Maximum}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_p95"}}</div><div class="fw-semibold">{{.ListCloneStats.P95}}</div></div>
+        </div>
+        <div class="row row-cols-2 g-2" data-gghstats-stats-panel="unique" hidden>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_mean"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Mean}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_median"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Median}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_variance"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Variance}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_stddev"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.StandardDeviation}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_min"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Minimum}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_max"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Maximum}}</div></div>
+          <div class="col"><div class="small text-muted">{{call .T "index.stats_p95"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.P95}}</div></div>
+        </div>
+      </div>
+      {{end}}
       <div class="card-body app-brutal-chart-well chart-index-clones-wrap">
         {{if gt .ListClonesAggCount 0}}
         <canvas id="chart_index_clones" class="chart-canvas chart-canvas-index-clones" aria-label="{{call .T "index.chart_title"}}"></canvas>
