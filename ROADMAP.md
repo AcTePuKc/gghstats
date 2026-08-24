@@ -67,7 +67,7 @@ Detailed band plans (scope, exit criteria, checklist):
 
 ## Versioning (SemVer)
 
-Current release **1.0.1**. Patch = third digit of the **current** minor.
+Current release **1.3.0**. Patch = third digit of the **current** minor.
 
 | Form | Examples | Meaning |
 |------|----------|---------|
@@ -79,7 +79,7 @@ Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). D
 
 ## Next (after 1.0)
 
-**1.0.x** patches as needed. Active feature band: [plan-v1.1.0.md](docs/plan-v1.1.0.md) (Line E). After 1.1.0: **1.2.0** unique-cloners visibility (index + repo) + Featured JSON. Line B waits for **2.0.0**.
+**1.0.x** patches as needed. Active feature band: [plan-v1.1.0.md](docs/plan-v1.1.0.md) (Line E). Shipped: **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, `# - %` rank/share column, JSONL export). Remaining from the unique-cloners plan: repo-page unique cloners + Featured JSON — next minor. Line B waits for **2.0.0**.
 
 ## Explicit non-goals (this repo)
 

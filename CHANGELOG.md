@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-24
+
 ### Added
 
 - **Index clone statistics + ranking + JSONL export:** `/` gains a selectable **Daily clone statistics** panel (mean, median, population variance, population standard deviation, minimum, maximum, nearest-rank P95) for total clones and unique cloners, a second **Unique** line on the Clones over time chart, a **`# - %`** column showing each repository's total-clone rank and share of the current filtered list, and an **Export JSONL** control that downloads each matching repository's summary, traffic history, referrers, paths, and stars. Statistics, ranking, and export honor the current search filter; the API response and SQLite schema are unchanged. Translations added across all five locales.
@@ -584,7 +586,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/hrodrig/gghstats/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/hrodrig/gghstats/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/hrodrig/gghstats/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/hrodrig/gghstats/compare/v1.0.0...v1.0.1
