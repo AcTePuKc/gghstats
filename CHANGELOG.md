@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Index clone statistics + ranking + JSONL export:** `/` gains a selectable **Daily clone statistics** panel (mean, median, population variance, population standard deviation, minimum, maximum, nearest-rank P95) for total clones and unique cloners, a second **Unique** line on the Clones over time chart, a **`# - %`** column showing each repository's total-clone rank and share of the current filtered list, and an **Export JSONL** control that downloads each matching repository's summary, traffic history, referrers, paths, and stars. Statistics, ranking, and export honor the current search filter; the API response and SQLite schema are unchanged. Translations added across all five locales.
+
 ## [1.2.0] - 2026-08-22
 
 ### Added
