@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Sitemap `/featured`:** when the Featured showcase is non-empty, `/sitemap.xml` includes the public `/featured` URL (same indexability rules as `/` and `/h2h`). Empty catalog unchanged.
+
 ## [1.3.0] - 2026-08-24
 
 ### Added

@@ -83,5 +83,5 @@ Empty catalog = 1.0.1 chrome and discovery. Table **R1–R12**: [design spec Tes
 
 - **1.1.x:** SemVer patches of 1.1.0 (`1.1.1`, …). No new features.
 - **Shipped later:** **1.2.0** — Featured pagination/search/sort + compact numbers; **1.3.0** — index unique-cloners visibility, `# - %` rank/share, JSONL export (see CHANGELOG).
-- **Still open (next minor):** repo-page unique cloners; Featured JSON dogfood; optional sitemap `/featured`. UI polish tracked in GitHub issues after 1.3.0.
+- **Moved to 1.4.0:** repo-page unique cloners; Featured JSON dogfood; sitemap `/featured` — see [plan-v1.4.0.md](plan-v1.4.0.md). UI polish: GitHub issues #22–#25 (Carlok).
 - **2.0.0:** Line B (webhooks / rate-limit relief), not more vitrine scope.

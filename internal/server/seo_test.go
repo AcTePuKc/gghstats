@@ -114,6 +114,35 @@ func TestSitemapIncludesRepos(t *testing.T) {
 			t.Errorf("missing %q in body:\n%s", want, body)
 		}
 	}
+	if strings.Contains(body, "/featured") {
+		t.Fatalf("empty featured catalog must not include /featured:\n%s", body)
+	}
+}
+
+func TestSitemapIncludesFeaturedWhenNonEmpty(t *testing.T) {
+	db := testStore(t)
+	if err := db.AddFeatured("acme/showcase"); err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{Store: db, PublicURL: "https://stats.example.com"})
+	req := httptest.NewRequest("GET", "/sitemap.xml", nil)
+	req.Host = "stats.example.com"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	want := "<loc>https://stats.example.com/featured</loc>"
+	if !strings.Contains(body, want) {
+		t.Fatalf("missing %q in body:\n%s", want, body)
+	}
+	// Core pages still present; /featured sits after /h2h.
+	h2h := strings.Index(body, "<loc>https://stats.example.com/h2h</loc>")
+	feat := strings.Index(body, want)
+	if h2h < 0 || feat < 0 || feat < h2h {
+		t.Fatalf("/featured should appear after /h2h:\n%s", body)
+	}
 }
 
 func TestSitemapLocalhostEmpty(t *testing.T) {
