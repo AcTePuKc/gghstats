@@ -15,7 +15,8 @@ Detailed band plans (scope, exit criteria, checklist):
 | **0.11.x** | [docs/plan-v0.11.x.md](docs/plan-v0.11.x.md) (closed) |
 | **1.0.0** | [docs/plan-v1.0.0.md](docs/plan-v1.0.0.md) (closed) |
 | **1.1.0** | [docs/plan-v1.1.0.md](docs/plan-v1.1.0.md) (closed) |
-| **1.2.0 / 1.3.0** | No separate band plan file — scope in [CHANGELOG.md](CHANGELOG.md); follow-ups under **Next** |
+| **1.2.0 / 1.3.0** | No separate band plan file — scope in [CHANGELOG.md](CHANGELOG.md) |
+| **1.4.0** | [docs/plan-v1.4.0.md](docs/plan-v1.4.0.md) (in progress) |
 
 ## Principles
 
@@ -55,6 +56,7 @@ Detailed band plans (scope, exit criteria, checklist):
 1.1.x  → SemVer patches after 1.1.0 is tagged (1.1.1, …)
 1.2.0  → Featured pagination/search/sort + compact numbers (CHANGELOG)
 1.3.0  → index unique cloners + rank/share + JSONL export (CHANGELOG)
+1.4.0  → uniques UX + Featured JSON + sitemap /featured → docs/plan-v1.4.0.md
 2.0.0  → Line B (webhooks / serious ROADMAP) — not Featured
 ```
 
@@ -82,11 +84,11 @@ Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). D
 
 ## Next (after 1.3.0)
 
-Band plans through **1.1.0** are **closed**. Current release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
+Band plans through **1.1.0** are **closed**. Active band: [plan-v1.4.0.md](docs/plan-v1.4.0.md). Current release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
 
 **Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, `# - %` rank/share column, JSONL export).
 
-**Next minor candidates:** repo-page unique cloners; Featured JSON dogfood; optional sitemap `/featured`. **1.3.x UI polish:** open issues (#22–#25). Line B waits for **2.0.0**.
+**1.4.0 (in progress):** repo/index unique-cloner UX; Featured JSON dogfood; sitemap `/featured`. Hold `VERSION` bump until Carlok UI issues (#22–#25) land or are deferred. Line B waits for **2.0.0**.
 
 ## Explicit non-goals (this repo)
 
