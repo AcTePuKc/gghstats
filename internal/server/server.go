@@ -317,7 +317,7 @@ func handleAPIRepos(cfg Config) http.HandlerFunc {
 			return
 		}
 
-		totalStars, totalForks, totalClones, totalViews := sumIndexKPIs(repos)
+		totalStars, totalForks, totalClones, _, totalViews, _ := sumIndexKPIs(repos)
 		items := repos
 		resp := map[string]interface{}{
 			"total_count":  len(repos),
@@ -549,14 +549,16 @@ func repoNamesFromSummaries(repos []store.RepoSummary) []string {
 	return names
 }
 
-func sumIndexKPIs(repos []store.RepoSummary) (stars, forks, clones, views int) {
+func sumIndexKPIs(repos []store.RepoSummary) (stars, forks, clones, cloneUniques, views, viewUniques int) {
 	for _, rp := range repos {
 		stars += rp.Stars
 		forks += rp.Forks
 		clones += rp.TotalClones
+		cloneUniques += rp.CloneUniques
 		views += rp.TotalViews
+		viewUniques += rp.TotalUniques
 	}
-	return stars, forks, clones, views
+	return stars, forks, clones, cloneUniques, views, viewUniques
 }
 
 func indexReposPageSlice(repos []store.RepoSummary, page, perPage int) (start, end int, pageSlice []store.RepoSummary) {
@@ -601,7 +603,9 @@ type indexTemplatePayload struct {
 	KPIStars             int
 	KPIForks             int
 	KPIClones            int
+	KPICloneUniques      int
 	KPIViews             int
+	KPIViewUniques       int
 	PrevURL              string
 	NextURL              string
 	SortNameURL          string
@@ -622,7 +626,7 @@ func buildIndexTemplatePayload(
 	reposPage []indexRepoRow,
 	sort, dir, query string,
 	page, perPage, total, start, end, totalPages int,
-	kpiStars, kpiForks, kpiClones, kpiViews int,
+	kpiStars, kpiForks, kpiClones, kpiCloneUniques, kpiViews, kpiViewUniques int,
 	listClonesAggJSON template.JS,
 	listClonesAggCount int,
 	listCloneStats *cloneStatistics,
@@ -641,7 +645,9 @@ func buildIndexTemplatePayload(
 		KPIStars:             kpiStars,
 		KPIForks:             kpiForks,
 		KPIClones:            kpiClones,
+		KPICloneUniques:      kpiCloneUniques,
 		KPIViews:             kpiViews,
+		KPIViewUniques:       kpiViewUniques,
 		PrevURL:              buildIndexURL(sort, dir, query, page-1, perPage),
 		NextURL:              buildIndexURL(sort, dir, query, page+1, perPage),
 		SortNameURL:          buildSortURL("name", sort, dir, query, perPage),
@@ -688,7 +694,7 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		kpiStars, kpiForks, kpiClones, kpiViews := sumIndexKPIs(repos)
+		kpiStars, kpiForks, kpiClones, kpiCloneUniques, kpiViews, kpiViewUniques := sumIndexKPIs(repos)
 		rankedRepos := rankIndexReposByTotalClones(repos)
 		total := len(repos)
 		start, end, reposPage := indexRepoRowsPageSlice(rankedRepos, page, perPage)
@@ -698,7 +704,8 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 		lb := bindPageLocale(r, cfg)
 		data := buildIndexTemplatePayload(
 			reposPage, sort, dir, query, page, perPage, total, start, end, totalPages,
-			kpiStars, kpiForks, kpiClones, kpiViews, listClonesAggJSON, listClonesAggCount, listCloneStats, listUniqueCloneStats,
+			kpiStars, kpiForks, kpiClones, kpiCloneUniques, kpiViews, kpiViewUniques,
+			listClonesAggJSON, listClonesAggCount, listCloneStats, listUniqueCloneStats,
 		)
 		data.localeBinder = lb
 		data.ShowingLine = lb.Tfmt("index.showing", map[string]string{

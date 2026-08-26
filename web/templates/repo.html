@@ -17,14 +17,16 @@
         <div class="row g-3">
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">
-              <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.total_clones"}}</div>
-              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.CloneUniques}} <span class="text-muted fw-normal fs-6">/</span> {{call .Num .Repo.TotalClones}}</div>
+              <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.unique_cloners"}}</div>
+              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.CloneUniques}}</div>
+              <div class="small text-muted mt-1">{{call .Num .Repo.TotalClones}} {{call .T "repo.clone_events"}}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">
-              <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.total_views"}}</div>
-              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.TotalUniques}} <span class="text-muted fw-normal fs-6">/</span> {{call .Num .Repo.TotalViews}}</div>
+              <div class="text-muted text-uppercase small fw-semibold letter-spacing-tight">{{call .T "repo.unique_viewers"}}</div>
+              <div class="fs-4 fw-bold text-primary mt-1" data-gghstats-role="stat-value">{{call .Num .Repo.TotalUniques}}</div>
+              <div class="small text-muted mt-1">{{call .Num .Repo.TotalViews}} {{call .T "repo.view_events"}}</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
