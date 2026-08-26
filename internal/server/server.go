@@ -179,6 +179,7 @@ func mountAPIRoutes(mux *http.ServeMux, cfg Config) {
 	mux.HandleFunc("GET /api/v1/repos/{owner}/{repo}/popular", apiMiddleware(cfg.APIToken, handleAPIRepoPopular(cfg)))
 	mux.HandleFunc("GET /api/v1/h2h", apiMiddleware(cfg.APIToken, handleAPIH2H(cfg)))
 	mux.HandleFunc("GET /api/v1/charts/index-clones", apiMiddleware(cfg.APIToken, handleAPIIndexClonesChart(cfg)))
+	mux.HandleFunc("GET /api/v1/featured", apiMiddleware(cfg.APIToken, handleAPIFeatured(cfg)))
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		mux.HandleFunc("GET /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStatus(cfg)))
 		mux.HandleFunc("POST /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStart(cfg)))

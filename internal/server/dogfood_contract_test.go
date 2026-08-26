@@ -81,4 +81,13 @@ func TestDogfoodContract_APIOnly(t *testing.T) {
 	if h2hResp["charts"] == nil {
 		t.Fatal("h2h missing charts")
 	}
+
+	// Featured showcase (may be empty)
+	featured := getJSON("/api/v1/featured")
+	if _, ok := featured["items"]; !ok {
+		t.Fatal("featured missing items")
+	}
+	if _, ok := featured["total_count"]; !ok {
+		t.Fatal("featured missing total_count")
+	}
 }
