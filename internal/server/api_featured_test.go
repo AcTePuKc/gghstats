@@ -3,10 +3,12 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
-func TestAPIFeaturedListAndQuery(t *testing.T) {
+func featuredHandler(t *testing.T) http.Handler {
+	t.Helper()
 	db := testStore(t)
 	if err := db.AddFeatured("z/zebra"); err != nil {
 		t.Fatal(err)
@@ -20,10 +22,11 @@ func TestAPIFeaturedListAndQuery(t *testing.T) {
 	if err := db.UpsertFeaturedMeta("z/zebra", "up/parent", "up/zebra", "Zebra", 10, true); err != nil {
 		t.Fatal(err)
 	}
+	return New(Config{Store: db, APIToken: "tok", DisableMetrics: true})
+}
 
-	h := New(Config{Store: db, APIToken: "tok", DisableMetrics: true})
-
-	w := apiGET(t, h, "/api/v1/featured?sort=name&dir=asc", "tok")
+func decodeFeaturedJSON(t *testing.T, w *httptest.ResponseRecorder) map[string]interface{} {
+	t.Helper()
 	if w.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
 	}
@@ -31,6 +34,12 @@ func TestAPIFeaturedListAndQuery(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
+	return body
+}
+
+func TestAPIFeaturedListSortsByName(t *testing.T) {
+	h := featuredHandler(t)
+	body := decodeFeaturedJSON(t, apiGET(t, h, "/api/v1/featured?sort=name&dir=asc", "tok"))
 	if body["total_count"].(float64) != 2 {
 		t.Fatalf("total_count = %v", body["total_count"])
 	}
@@ -48,23 +57,29 @@ func TestAPIFeaturedListAndQuery(t *testing.T) {
 	if _, hasTraffic := first["total_clones"]; hasTraffic {
 		t.Fatal("featured items must not include traffic fields")
 	}
+}
 
-	w = apiGET(t, h, "/api/v1/featured?q=zebra&sort=name&dir=asc", "tok")
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatal(err)
-	}
+func TestAPIFeaturedQuery(t *testing.T) {
+	h := featuredHandler(t)
+	body := decodeFeaturedJSON(t, apiGET(t, h, "/api/v1/featured?q=zebra&sort=name&dir=asc", "tok"))
 	if body["total_count"].(float64) != 1 {
 		t.Fatalf("q filter count = %v", body["total_count"])
 	}
+}
 
-	w = apiGET(t, h, "/api/v1/featured?sort=name&dir=asc&page=1&per_page=1", "tok")
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatal(err)
+func TestAPIFeaturedPagination(t *testing.T) {
+	h := featuredHandler(t)
+	body := decodeFeaturedJSON(t, apiGET(t, h, "/api/v1/featured?sort=name&dir=asc&page=1&per_page=1", "tok"))
+	if body["page"].(float64) != 1 {
+		t.Fatalf("page = %v", body["page"])
 	}
-	if body["page"].(float64) != 1 || body["per_page"].(float64) != 1 || body["total_pages"].(float64) != 2 {
-		t.Fatalf("pagination meta = %#v", body)
+	if body["per_page"].(float64) != 1 {
+		t.Fatalf("per_page = %v", body["per_page"])
 	}
-	items = body["items"].([]interface{})
+	if body["total_pages"].(float64) != 2 {
+		t.Fatalf("total_pages = %v", body["total_pages"])
+	}
+	items := body["items"].([]interface{})
 	if len(items) != 1 {
 		t.Fatalf("page size = %d", len(items))
 	}
@@ -73,19 +88,15 @@ func TestAPIFeaturedListAndQuery(t *testing.T) {
 func TestAPIFeaturedEmpty(t *testing.T) {
 	db := testStore(t)
 	h := New(Config{Store: db, APIToken: "tok", DisableMetrics: true, APIOnly: true})
-	w := apiGET(t, h, "/api/v1/featured", "tok")
-	if w.Code != http.StatusOK {
-		t.Fatalf("status=%d", w.Code)
-	}
-	var body map[string]interface{}
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
-		t.Fatal(err)
-	}
+	body := decodeFeaturedJSON(t, apiGET(t, h, "/api/v1/featured", "tok"))
 	if body["total_count"].(float64) != 0 {
 		t.Fatalf("total_count = %v", body["total_count"])
 	}
 	items, ok := body["items"].([]interface{})
-	if !ok || len(items) != 0 {
+	if !ok {
 		t.Fatalf("items = %#v", body["items"])
+	}
+	if len(items) != 0 {
+		t.Fatalf("items len = %d", len(items))
 	}
 }
