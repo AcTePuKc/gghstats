@@ -45,9 +45,9 @@ Current **1.3.0**. This band → **1.4.0** (minor). No `1.3.x` feature dump: Car
 ## Checklist
 
 - [x] S1 sitemap `/featured` + tests
-- [ ] U1 repo/index unique-cloner labels / hierarchy + i18n
+- [x] U1 repo/index unique-cloner labels / hierarchy + i18n
 - [ ] F1 `GET /api/v1/featured` + SPEC + api.md + tests
-- [ ] CHANGELOG `[Unreleased]` notes per slice
+- [x] CHANGELOG `[Unreleased]` notes per slice
 - [ ] Wait / integrate Carlok #22–#25 (or defer note)
 - [ ] `VERSION` 1.4.0 dedicated commit (user OK)
 - [ ] `make release-check` (user asks)

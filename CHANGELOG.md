@@ -11,6 +11,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Sitemap `/featured`:** when the Featured showcase is non-empty, `/sitemap.xml` includes the public `/featured` URL (same indexability rules as `/` and `/h2h`). Empty catalog unchanged.
 
+### Changed
+
+- **Unique cloners / viewers UX (U1):** index KPI cards and repo stats show uniques as the primary figure with clone/view **events** secondary; table columns use `Unique / clones` and `Unique / views`. Labels clarify GitHub daily-unique sums (not lifetime machines).
+
 ## [1.3.0] - 2026-08-24
 
 ### Added

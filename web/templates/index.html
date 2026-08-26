@@ -21,18 +21,18 @@
   <div class="col-6 col-xl-3">
     <div class="card border-0 shadow-sm h-100" data-gghstats-role="kpi-card">
       <div class="card-body">
-        <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_clones"}}</div>
-        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPIClones}}</div>
-        <div class="small text-muted">{{call .T "index.kpi_clones_sub"}}</div>
+        <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_unique_cloners"}}</div>
+        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPICloneUniques}}</div>
+        <div class="small text-muted">{{call .Num .KPIClones}} {{call .T "index.kpi_clone_events_sub"}}</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-xl-3">
     <div class="card border-0 shadow-sm h-100" data-gghstats-role="kpi-card">
       <div class="card-body">
-        <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_views"}}</div>
-        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPIViews}}</div>
-        <div class="small text-muted">{{call .T "index.kpi_views_sub"}}</div>
+        <div class="text-uppercase text-muted small fw-semibold mb-1 letter-spacing-tight">{{call .T "index.kpi_unique_viewers"}}</div>
+        <div class="fs-3 fw-bold text-body" data-gghstats-role="kpi-value">{{call .Num .KPIViewUniques}}</div>
+        <div class="small text-muted">{{call .Num .KPIViews}} {{call .T "index.kpi_view_events_sub"}}</div>
       </div>
     </div>
   </div>
@@ -98,8 +98,8 @@
               <td><a href="/{{.Name}}" class="fw-medium" title="{{.Name}}">{{.Name}}</a></td>
               <td class="text-end">{{call $.Num .Stars}}</td>
               <td class="text-end">{{call $.Num .Forks}}</td>
-              <td class="text-end">{{call $.Num .TotalViews}}</td>
-              <td class="text-end">{{call $.Num .TotalClones}}</td>
+              <td class="text-end text-nowrap">{{call $.Num .TotalUniques}} <span class="text-muted">/</span> {{call $.Num .TotalViews}}</td>
+              <td class="text-end text-nowrap">{{call $.Num .CloneUniques}} <span class="text-muted">/</span> {{call $.Num .TotalClones}}</td>
               <td class="text-end">{{call $.Num .Clones1d}}</td>
               <td class="text-end">{{call $.Num .Clones7d}}</td>
               <td class="text-end">{{call $.Num .Clones30d}}</td>
