@@ -93,6 +93,7 @@ Applies to authenticated JSON handlers (repos, traffic, dogfood, sync, …), not
 | GET | `/api/v1/repos/{owner}/{repo}/stars` | Yes | Star history |
 | GET | `/api/v1/repos/{owner}/{repo}/popular` | Yes | Referrers + paths (14d) |
 | GET | `/api/v1/h2h` | Yes | Head-to-head compare |
+| GET | `/api/v1/featured` | Yes | Featured showcase list (metadata) |
 | GET/POST | `/api/v1/sync` | Yes | Sync status / trigger |
 | GET | `/metrics` | No* | Prometheus |
 
@@ -109,6 +110,7 @@ Use this when rebuilding the dashboard in another UI.
 | **Index** | `GET /api/repos` (+ optional `sort`/`dir`/`q`/`page`) and `GET /api/v1/charts/index-clones` |
 | **Repo page** | `GET /api/v1/repos/{o}/{r}`, `…/traffic?days=365` (or 30), `…/stars`, `…/popular` |
 | **H2H** | `GET /api/v1/h2h?a=owner/a&b=owner/b&w=7d` |
+| **Featured** | `GET /api/v1/featured` (+ optional `sort`/`dir`/`q`/`page`/`per_page`) |
 | **Sync button** | `POST /api/v1/sync` or `POST /api/v1/sync?repo=owner/name`; poll `GET /api/v1/sync` |
 
 ---
@@ -389,6 +391,51 @@ curl -sS -H "x-api-token: $TOKEN" \
 ```
 
 Scores are **shares 0–100 that sum to 100** (same formula as the HTML H2H page).
+
+---
+
+### `GET /api/v1/featured`
+
+Featured showcase list (dogfood for HTML `/featured`). **Metadata only** — no traffic clones/views.
+
+| Param | Default | Notes |
+|-------|---------|--------|
+| `sort` | `sort` | Display/insertion order (`sort`), `name`, or `stars` (upstream stars) |
+| `dir` | `asc` | `asc` or `desc` |
+| `q` | (empty) | Case-insensitive substring on `name` / `upstream_full_name` |
+| `page` | `1` | 1-based |
+| `per_page` | `25` | Max `100` |
+
+```bash
+curl -sS -H "x-api-token: $TOKEN" \
+  "$BASE/api/v1/featured?sort=stars&dir=desc&page=1&per_page=25"
+```
+
+```json
+{
+  "total_count": 1,
+  "sort": "stars",
+  "dir": "desc",
+  "q": "",
+  "page": 1,
+  "per_page": 25,
+  "total_pages": 1,
+  "items": [
+    {
+      "name": "hrodrig/awesome-readme",
+      "sort": 0,
+      "upstream_full_name": "matiassingers/awesome-readme",
+      "upstream_description": "A curated list of awesome READMEs",
+      "upstream_stars": 12000,
+      "fork": true,
+      "parent_full_name": "matiassingers/awesome-readme",
+      "meta_updated_at": "2026-08-22T12:00:00Z"
+    }
+  ]
+}
+```
+
+Empty catalog → `items: []`, `total_count: 0`.
 
 ---
 

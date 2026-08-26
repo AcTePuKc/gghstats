@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **Sitemap `/featured`:** when the Featured showcase is non-empty, `/sitemap.xml` includes the public `/featured` URL (same indexability rules as `/` and `/h2h`). Empty catalog unchanged.
+- **Featured JSON dogfood:** `GET /api/v1/featured` lists showcase metadata (`sort`/`dir`/`q`/`page`/`per_page`, same as HTML). No traffic fields. Documented in SPEC §3.11 and `docs/api.md`.
 
 ### Changed
 

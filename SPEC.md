@@ -41,6 +41,7 @@ This document describes **current** behavior. Changes that break clients must bu
 | `GET /api/v1/repos/{owner}/{repo}/popular` | `x-api-token` | Referrers + paths (~14d) |
 | `GET /api/v1/h2h` | `x-api-token` | Compare `a`/`b`/`w` + chart payload |
 | `GET /api/v1/charts/index-clones` | `x-api-token` | Aggregated index clones chart |
+| `GET /api/v1/featured` | `x-api-token` | Featured showcase list (metadata only) |
 | `GET` / `POST /api/v1/sync` | `x-api-token` | Sync coordinator |
 | `GET /metrics` | Public by default | Off with `GGHSTATS_METRICS=false` |
 | HTML UI (`/`, `/{owner}/{repo}`, `/h2h`, …) | Optional IP whitelist / rate limit | Omitted when `GGHSTATS_API_ONLY=true` |
@@ -69,7 +70,7 @@ There is **no** generic REST CRUD layer.
 
 ### 2.2 Dogfood contract (API5)
 
-With API-only + token + seeded store, an HTTP client must rebuild **index**, **repo detail**, and **H2H** using only documented JSON routes (covered by `TestDogfoodContract_APIOnly`). Checklist: `/api/repos` (+ optional chart), `/api/v1/repos/{o}/{r}` + traffic + stars + popular, `/api/v1/h2h`.
+With API-only + token + seeded store, an HTTP client must rebuild **index**, **repo detail**, **H2H**, and **Featured** using only documented JSON routes (covered by `TestDogfoodContract_APIOnly`). Checklist: `/api/repos` (+ optional chart), `/api/v1/repos/{o}/{r}` + traffic + stars + popular, `/api/v1/h2h`, `/api/v1/featured`.
 
 ---
 
@@ -126,6 +127,12 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 ### 3.10 `GET /api/v1/charts/index-clones`
 
 - Same auth. Honors same `sort`/`dir`/`q` filter as `/api/repos` (no pagination). **200**: `count`, `series`, echo of filter fields.
+
+### 3.11 `GET /api/v1/featured`
+
+- Same auth. Dogfood for HTML `/featured` (showcase metadata only — **no** clones/views/paths).
+- Query (same as HTML): `sort` (`sort` default display order, `name`, `stars`), `dir` (`asc` default / `desc`), `q` (substring on `name` / `upstream_full_name`), `page` (default 1), `per_page` (default 25, max 100).
+- **200**: `total_count`, `items[]` (`store.Featured` JSON: `name`, `sort`, `upstream_full_name`, `upstream_description`, `upstream_stars`, `fork`, optional `parent_full_name`, `meta_updated_at`), plus echoed `sort`/`dir`/`q`/`page`/`per_page`/`total_pages`. Empty catalog → `items: []`, `total_count: 0`.
 
 ## 4. Sync contracts
 
