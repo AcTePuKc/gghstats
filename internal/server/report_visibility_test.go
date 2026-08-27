@@ -105,3 +105,58 @@ func TestMetricsDoesNotLeakExcludedRepositoryOrFilter(t *testing.T) {
 		t.Fatalf("report-visible per-repo metric labels were not restored: %s", included)
 	}
 }
+
+func TestFeaturedAPIAndSitemapRespectReportVisibility(t *testing.T) {
+	db := testStore(t)
+	for _, repo := range []struct {
+		name       string
+		visibility string
+	}{
+		{"public/visible", store.VisibilityPublic},
+		{"secret/excluded", store.VisibilityPrivate},
+	} {
+		if err := db.UpsertRepoWithVisibility(repo.name, "", 0, 0, 0, 0, 0, false, false, "", repo.visibility); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.AddFeatured(repo.name); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.UpsertFeaturedMeta(repo.name, "", repo.name, repo.name+" metadata", 1, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if ok, err := db.SetRepoReportPolicy("secret/excluded", store.ReportExclude); err != nil || !ok {
+		t.Fatalf("exclude repo: ok=%v err=%v", ok, err)
+	}
+
+	h := New(Config{Store: db, APIToken: "token", DisableMetrics: true, PublicURL: "https://stats.example.com"})
+	apiReq := httptest.NewRequest(http.MethodGet, "/api/v1/featured", nil)
+	apiReq.Header.Set("x-api-token", "token")
+	apiRes := httptest.NewRecorder()
+	h.ServeHTTP(apiRes, apiReq)
+	if apiRes.Code != http.StatusOK {
+		t.Fatalf("featured API status=%d body=%s", apiRes.Code, apiRes.Body.String())
+	}
+	if strings.Contains(apiRes.Body.String(), "secret/excluded") || strings.Contains(apiRes.Body.String(), "excluded metadata") {
+		t.Fatalf("featured API leaked excluded repository: %s", apiRes.Body.String())
+	}
+	if !strings.Contains(apiRes.Body.String(), `"total_count":1`) || !strings.Contains(apiRes.Body.String(), "public/visible") {
+		t.Fatalf("featured API did not retain report-visible entry: %s", apiRes.Body.String())
+	}
+
+	sitemapReq := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
+	sitemapReq.Host = "stats.example.com"
+	sitemapRes := httptest.NewRecorder()
+	h.ServeHTTP(sitemapRes, sitemapReq)
+	if sitemapRes.Code != http.StatusOK {
+		t.Fatalf("sitemap status=%d body=%s", sitemapRes.Code, sitemapRes.Body.String())
+	}
+	if strings.Contains(sitemapRes.Body.String(), "secret/excluded") {
+		t.Fatalf("sitemap leaked excluded repository: %s", sitemapRes.Body.String())
+	}
+	for _, want := range []string{"https://stats.example.com/public/visible", "https://stats.example.com/featured"} {
+		if !strings.Contains(sitemapRes.Body.String(), want) {
+			t.Fatalf("sitemap missing report-visible URL %q: %s", want, sitemapRes.Body.String())
+		}
+	}
+}
