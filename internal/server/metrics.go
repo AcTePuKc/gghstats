@@ -22,7 +22,6 @@ const MetricsPath = "/metrics"
 type MetricsRegistryConfig struct {
 	Store            *store.Store
 	DBPath           string
-	Filter           string
 	PerRepoEnabled   bool
 	ReportVisibility store.ReportVisibility
 }
@@ -35,7 +34,6 @@ func NewMetricsRegistry(cfg MetricsRegistryConfig) (*prometheus.Registry, *metri
 	if cfg.Store != nil {
 		st := cfg.Store
 		dom = metrics.RegisterDomain(reg, metrics.DomainConfig{
-			Filter:         cfg.Filter,
 			DBPath:         cfg.DBPath,
 			StoreRepoCount: func() (int, error) { return st.ReportRepoCount(cfg.ReportVisibility) },
 			PerRepoEnabled: cfg.PerRepoEnabled,

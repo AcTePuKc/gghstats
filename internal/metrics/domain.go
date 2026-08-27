@@ -13,7 +13,6 @@ import (
 type Domain struct {
 	mu sync.Mutex
 
-	filter string
 	dbPath string
 
 	storeRepoCount func() (int, error)
@@ -27,7 +26,7 @@ type Domain struct {
 	syncErrors     *prometheus.CounterVec
 	syncReposProc  *prometheus.CounterVec
 	lastSyncTS     prometheus.Gauge
-	reposTotal     *prometheus.GaugeVec
+	reposTotal     prometheus.Gauge
 	dbSizeBytes    prometheus.Gauge
 
 	repoStars      *prometheus.GaugeVec
@@ -42,7 +41,6 @@ type Domain struct {
 
 // DomainConfig wires domain metrics at process startup.
 type DomainConfig struct {
-	Filter         string
 	DBPath         string
 	StoreRepoCount func() (int, error) // nil skips repos_total refresh
 	PerRepoEnabled bool
@@ -51,13 +49,7 @@ type DomainConfig struct {
 
 // RegisterDomain registers domain collectors on reg and returns the recorder.
 func RegisterDomain(reg prometheus.Registerer, cfg DomainConfig) *Domain {
-	filter := cfg.Filter
-	if filter == "" {
-		filter = "*"
-	}
-
 	d := &Domain{
-		filter:         filter,
 		dbPath:         cfg.DBPath,
 		storeRepoCount: cfg.StoreRepoCount,
 		perRepoEnabled: cfg.PerRepoEnabled,
@@ -109,12 +101,11 @@ func RegisterDomain(reg prometheus.Registerer, cfg DomainConfig) *Domain {
 			Name: "gghstats_last_sync_timestamp_seconds",
 			Help: "Unix timestamp of the last successful full sync.",
 		}),
-		reposTotal: prometheus.NewGaugeVec(
+		reposTotal: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "gghstats_repos_total",
-				Help: "Number of non-hidden repositories in the local database.",
+				Help: "Number of report-visible repositories in the local database.",
 			},
-			[]string{"filter"},
 		),
 		dbSizeBytes: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "gghstats_db_size_bytes",
@@ -241,7 +232,7 @@ func (d *Domain) RefreshStoreGauges() {
 	d.mu.Lock()
 	if d.storeRepoCount != nil {
 		if n, err := d.storeRepoCount(); err == nil {
-			d.reposTotal.WithLabelValues(d.filter).Set(float64(n))
+			d.reposTotal.Set(float64(n))
 		}
 	}
 	if d.dbPath != "" {
