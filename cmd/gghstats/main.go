@@ -63,6 +63,7 @@ Server env vars (serve):
   GGHSTATS_PORT                Listen port (default: 8080)
   GGHSTATS_FILTER              Repo filter (default: * = all)
   GGHSTATS_INCLUDE_PRIVATE     Include private repos (default false; 1/true/yes/on)
+  GGHSTATS_REPORT_PRIVATE      Include inherited private repos in reports (default false; unknown visibility remains hidden)
   GGHSTATS_SYNC_INTERVAL       Sync frequency (default: 1h)
   GGHSTATS_SYNC_ON_STARTUP     Run full sync before serving (default: true; false = use existing DB, sync later)
   GGHSTATS_SYNC_WORKERS        Concurrent repos per sync cycle (default: 4; same as --sync-workers)
