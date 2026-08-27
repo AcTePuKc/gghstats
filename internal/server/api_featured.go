@@ -12,7 +12,7 @@ func handleAPIFeatured(cfg Config) http.HandlerFunc {
 	db := cfg.Store
 	return func(w http.ResponseWriter, r *http.Request) {
 		sort, dir, query, page, perPage := parseFeaturedQueryParams(r)
-		items, total, err := db.FilterFeatured(query, sort, dir, page, perPage)
+		items, total, err := db.FilterReportFeatured(cfg.ReportVisibility, query, sort, dir, page, perPage)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
