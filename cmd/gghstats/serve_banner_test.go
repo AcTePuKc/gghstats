@@ -24,24 +24,6 @@ func TestFormatLogHandler(t *testing.T) {
 	}
 }
 
-func TestMaskGitHubToken(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		in, want string
-	}{
-		{"", "(empty)"},
-		{"short", "[masked]"},
-		{"ghp_12", "[masked]"},
-		{"12345678", "1234....5678"},
-		{"ghp_abcdefghijklm", "ghp_....jklm"},
-	}
-	for _, tt := range tests {
-		if got := maskGitHubToken(tt.in); got != tt.want {
-			t.Errorf("maskGitHubToken(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-}
-
 func TestServeLogLevel(t *testing.T) {
 	tests := []struct {
 		env    string
@@ -85,8 +67,8 @@ func TestWriteServeStartupBanner(t *testing.T) {
 	if !strings.Contains(out, "0.9.9") || !strings.Contains(out, "127.0.0.1:9999") {
 		t.Errorf("banner: %q", out)
 	}
-	if !strings.Contains(out, "1234....3456") {
-		t.Errorf("expected masked token in %q", out)
+	if strings.Contains(out, "github_token") || strings.Contains(out, "1234567890123456") {
+		t.Errorf("startup banner must not include credential-derived data: %q", out)
 	}
 }
 
@@ -98,19 +80,4 @@ func TestInitServeLogging(t *testing.T) {
 	initServeLogging()
 	slog.Warn("test init logging")
 	// Global handler is wired; absence of panic is enough for coverage.
-}
-
-func TestWriteServeStartupBannerEmptyToken(t *testing.T) {
-	oldV, oldD := version.Version, version.BuildDate
-	version.Version = "v"
-	version.BuildDate = "d"
-	t.Cleanup(func() {
-		version.Version, version.BuildDate = oldV, oldD
-	})
-
-	var buf bytes.Buffer
-	writeServeStartupBanner(&buf, serveConfig{Host: "0.0.0.0", Port: "80", GithubToken: ""})
-	if !strings.Contains(buf.String(), "(empty)") {
-		t.Errorf("want (empty) token: %q", buf.String())
-	}
 }

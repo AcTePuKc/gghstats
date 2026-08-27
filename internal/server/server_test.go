@@ -86,7 +86,6 @@ func TestMetricsEndpointDomainSeries(t *testing.T) {
 	reg, dom := NewMetricsRegistry(MetricsRegistryConfig{
 		Store:  db,
 		DBPath: dbPath,
-		Filter: "*",
 	})
 	// Counters, histograms, and rate-limit gauges are omitted until first observation.
 	dom.ObserveGitHubRequest("user_repos", "success")

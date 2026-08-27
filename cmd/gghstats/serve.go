@@ -254,7 +254,6 @@ func runServe(args []string) error {
 		metricsReg, domainMetrics = server.NewMetricsRegistry(server.MetricsRegistryConfig{
 			Store:            db,
 			DBPath:           cfg.DB,
-			Filter:           cfg.Filter,
 			PerRepoEnabled:   envBool("GGHSTATS_METRICS_PER_REPO", false),
 			ReportVisibility: store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
 		})

@@ -53,3 +53,55 @@ func TestExcludedRepositoryDoesNotLeakAcrossReportRoutes(t *testing.T) {
 		t.Fatal("H2H page echoed excluded repo")
 	}
 }
+
+func TestMetricsDoesNotLeakExcludedRepositoryOrFilter(t *testing.T) {
+	db := testStore(t)
+	const repo = "secret/nope"
+	if err := db.UpsertRepoWithVisibility(repo, "must not leak", 1, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.UpsertView(repo, "2026-08-26", 7, 3); err != nil {
+		t.Fatal(err)
+	}
+	reg, dom := NewMetricsRegistry(MetricsRegistryConfig{
+		Store:            db,
+		PerRepoEnabled:   true,
+		ReportVisibility: store.ReportVisibility{},
+	})
+	h := New(Config{Store: db, MetricsRegistry: reg, DomainMetrics: dom})
+
+	scrape := func() string {
+		t.Helper()
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, MetricsPath, nil))
+		if w.Code != http.StatusOK {
+			t.Fatalf("metrics status=%d", w.Code)
+		}
+		return w.Body.String()
+	}
+
+	if ok, err := db.SetRepoReportPolicy(repo, store.ReportExclude); err != nil || !ok {
+		t.Fatalf("exclude repo: ok=%v err=%v", ok, err)
+	}
+	excluded := scrape()
+	if strings.Contains(excluded, repo) || strings.Contains(excluded, `owner="secret"`) || strings.Contains(excluded, `repo="nope"`) || strings.Contains(excluded, `filter=`) {
+		t.Fatalf("metrics leaked excluded repo or raw filter: %s", excluded)
+	}
+	if !strings.Contains(excluded, "gghstats_repos_total 0") {
+		t.Fatalf("metrics must retain report-scoped repo total, got: %s", excluded)
+	}
+
+	if ok, err := db.SetRepoReportPolicy(repo, store.ReportInclude); err != nil || !ok {
+		t.Fatalf("include repo: ok=%v err=%v", ok, err)
+	}
+	included := scrape()
+	if !strings.Contains(included, "gghstats_repos_total 1") {
+		t.Fatalf("included repo was not counted, got: %s", included)
+	}
+	if strings.Contains(included, repo) || strings.Contains(included, `filter=`) {
+		t.Fatalf("aggregate metrics must not expose repository configuration: %s", included)
+	}
+	if !strings.Contains(included, `owner="secret"`) || !strings.Contains(included, `repo="nope"`) {
+		t.Fatalf("report-visible per-repo metric labels were not restored: %s", included)
+	}
+}

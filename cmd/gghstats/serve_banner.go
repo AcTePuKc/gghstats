@@ -38,28 +38,13 @@ func (p *linePrefixWriter) Write(b []byte) (int, error) {
 	}
 }
 
-// maskGitHubToken returns the first 4 and last 4 runes of the token separated by "....".
-// Shorter tokens are not partially revealed.
-func maskGitHubToken(tok string) string {
-	if tok == "" {
-		return "(empty)"
-	}
-	r := []rune(tok)
-	if len(r) < 8 {
-		return "[masked]"
-	}
-	const keep = 4
-	return string(r[:keep]) + "...." + string(r[len(r)-keep:])
-}
-
 func writeServeStartupBanner(w io.Writer, cfg serveConfig) {
 	addr := cfg.Host + ":" + cfg.Port
-	fmt.Fprintf(w, "gghstats %s | build %s | platform %s/%s | listen %s | github_token %s\n",
+	fmt.Fprintf(w, "gghstats %s | build %s | platform %s/%s | listen %s\n",
 		version.Version,
 		version.BuildDate,
 		runtime.GOOS, runtime.GOARCH,
 		addr,
-		maskGitHubToken(cfg.GithubToken),
 	)
 }
 
