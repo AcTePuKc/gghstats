@@ -486,8 +486,8 @@ func TestRepoPageNotFound(t *testing.T) {
 	if !strings.Contains(body, "404") || !strings.Contains(body, "Repository not found") {
 		t.Fatalf("expected brutalist 404 HTML, got %d bytes", len(body))
 	}
-	if !strings.Contains(body, "/nonexistent/repo") {
-		t.Fatalf("expected path in body: %q", body)
+	if strings.Contains(body, "/nonexistent/repo") {
+		t.Fatalf("not-found page must not echo requested repository: %q", body)
 	}
 }
 

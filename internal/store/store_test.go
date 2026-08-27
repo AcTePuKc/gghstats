@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -39,8 +40,8 @@ func TestVersionedMigrations(t *testing.T) {
 	if err := s.DB().QueryRow("PRAGMA user_version").Scan(&ver); err != nil {
 		t.Fatal(err)
 	}
-	if ver != 6 {
-		t.Errorf("user_version = %d, want 6", ver)
+	if ver != 8 {
+		t.Errorf("user_version = %d, want 8", ver)
 	}
 
 	// repos table should exist
@@ -56,6 +57,9 @@ func TestVersionedMigrations(t *testing.T) {
 	if col != "parent_full_name" {
 		t.Errorf("repos.parent_full_name column missing, got %q", col)
 	}
+	if err := s.DB().QueryRow(`SELECT name FROM pragma_table_info('repos') WHERE name = 'github_visibility'`).Scan(&col); err != nil {
+		t.Fatalf("github_visibility column: %v", err)
+	}
 
 	if err := s.DB().QueryRow(`SELECT name FROM pragma_table_info('repos') WHERE name = 'last_seen_star_count'`).Scan(&col); err != nil {
 		t.Fatalf("last_seen_star_count column: %v", err)
@@ -64,6 +68,118 @@ func TestVersionedMigrations(t *testing.T) {
 	// stars table should exist
 	if err := s.DB().QueryRow("SELECT COUNT(*) FROM stars").Scan(&count); err != nil {
 		t.Fatalf("stars table missing: %v", err)
+	}
+}
+
+func TestTrafficMetricStatePersistsExplicitZeroAndCoverage(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "traffic.db")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fetched := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
+	if err := s.RecordTrafficMetricSuccess("o/r", "views", []DayRow{{Date: "2026-08-25", Count: 0, Uniques: 0}}, fetched, "2026-08-14", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	s, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	rows, err := s.ViewsByRange("o/r", "2026-08-25", "2026-08-26")
+	if err != nil || len(rows) != 1 || rows[0].Count != 0 {
+		t.Fatalf("explicit zero rows=%+v err=%v", rows, err)
+	}
+	st, err := s.TrafficMetricState("o/r", "views")
+	if err != nil || st.LastSuccessAt != fetched.Format(time.RFC3339) || st.LatestObservedDate != "2026-08-25" {
+		t.Fatalf("state=%+v err=%v", st, err)
+	}
+	coverage, err := s.TrafficCoverageDates("o/r", "views", st.LastSuccessAt)
+	if err != nil || !coverage["2026-08-25"] || coverage["2026-08-26"] {
+		t.Fatalf("coverage=%v err=%v", coverage, err)
+	}
+}
+
+func TestTrafficMetricSuccessAcceptsLaterGitHubRevision(t *testing.T) {
+	s := tempDB(t)
+	first := time.Date(2026, 8, 27, 10, 0, 0, 0, time.UTC)
+	later := first.Add(time.Hour)
+	if err := s.RecordTrafficMetricSuccess("o/r", "clones", []DayRow{{Date: "2026-08-26", Count: 2, Uniques: 1}}, first, "2026-08-14", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RecordTrafficMetricSuccess("o/r", "clones", []DayRow{{Date: "2026-08-26", Count: 5, Uniques: 3}}, later, "2026-08-14", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.ClonesByRange("o/r", "2026-08-26", "2026-08-26")
+	if err != nil || len(rows) != 1 || rows[0].Count != 5 || rows[0].Uniques != 3 {
+		t.Fatalf("rows=%+v err=%v", rows, err)
+	}
+}
+
+func TestTrafficMetricSuccessAcceptsDownwardGitHubRevision(t *testing.T) {
+	s := tempDB(t)
+	first := time.Date(2026, 8, 27, 10, 0, 0, 0, time.UTC)
+	if err := s.RecordTrafficMetricSuccess("o/r", "views", []DayRow{{Date: "2026-08-26", Count: 9, Uniques: 6}}, first, "2026-08-14", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RecordTrafficMetricSuccess("o/r", "views", []DayRow{{Date: "2026-08-26", Count: 4, Uniques: 3}}, first.Add(time.Hour), "2026-08-14", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.ViewsByRange("o/r", "2026-08-26", "2026-08-26")
+	if err != nil || len(rows) != 1 || rows[0].Count != 4 || rows[0].Uniques != 3 {
+		t.Fatalf("rows=%+v err=%v", rows, err)
+	}
+}
+
+func TestTrafficCoverageIsOnlyTheLatestResponse(t *testing.T) {
+	s := tempDB(t)
+	fetched := time.Date(2026, 8, 27, 10, 0, 0, 0, time.UTC)
+	if err := s.RecordTrafficMetricSuccess("o/r", "views", []DayRow{{Date: "2026-08-25", Count: 1, Uniques: 1}}, fetched, "2026-08-25", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RecordTrafficMetricSuccess("o/r", "views", []DayRow{{Date: "2026-08-26", Count: 0, Uniques: 0}}, fetched, "2026-08-25", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	coverage, err := s.TrafficCoverageDates("o/r", "views", fetched.Format(time.RFC3339))
+	if err != nil || coverage["2026-08-25"] || !coverage["2026-08-26"] {
+		t.Fatalf("coverage=%v err=%v", coverage, err)
+	}
+}
+
+func TestMigrateV8ResumesAfterPartialColumnAddition(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "partial-v8.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, migrate := range []migrationFunc{migrateV1, migrateV2, migrateV3, migrateV4, migrateV5, migrateV6, migrateV7} {
+		if err := migrate(db); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := db.Exec(`ALTER TABLE repos ADD COLUMN github_visibility TEXT NOT NULL DEFAULT 'unknown'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`PRAGMA user_version = 7`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var policy string
+	if err := s.DB().QueryRow(`SELECT report_policy FROM repos LIMIT 1`).Scan(&policy); err != sql.ErrNoRows {
+		t.Fatalf("report_policy query err=%v", err)
+	}
+	var version int
+	if err := s.DB().QueryRow(`PRAGMA user_version`).Scan(&version); err != nil || version != 8 {
+		t.Fatalf("version=%d err=%v", version, err)
 	}
 }
 

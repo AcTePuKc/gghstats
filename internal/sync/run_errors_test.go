@@ -62,11 +62,55 @@ func TestRunClassifiesViewsFailure(t *testing.T) {
 	gh.BaseURL = srv.URL
 	rec := &fakeRec{kinds: map[string]int{}, repos: map[string]int{}}
 
-	if _, err := Run(gh, db, Options{Repos: []string{repoPath}}, rec); err != nil {
-		t.Fatalf("Run: %v", err)
+	if _, err := Run(gh, db, Options{Repos: []string{repoPath}}, rec); err == nil {
+		t.Fatal("Run should report a partial traffic failure")
 	}
 	if rec.kinds["views"] != 1 {
 		t.Fatalf("views kind count = %d, want 1 (got %v)", rec.kinds["views"], rec.kinds)
+	}
+	views, err := db.TrafficMetricState(repoPath, "views")
+	if err != nil || views.LastStatus != "failed" {
+		t.Fatalf("views state=%+v err=%v", views, err)
+	}
+	clones, err := db.TrafficMetricState(repoPath, "clones")
+	if err != nil || clones.LastStatus != "success" {
+		t.Fatalf("clones state=%+v err=%v", clones, err)
+	}
+}
+
+func TestRunClassifiesClonesFailureWithViewsSuccess(t *testing.T) {
+	const repoPath = "owner/clones-fail"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/" + repoPath:
+			_ = json.NewEncoder(w).Encode(github.Repo{ID: 1, FullName: repoPath})
+		case "/repos/" + repoPath + "/pulls":
+			_ = json.NewEncoder(w).Encode([]github.PullRequest{})
+		case "/repos/" + repoPath + "/traffic/views":
+			_ = json.NewEncoder(w).Encode(github.TrafficViews{})
+		case "/repos/" + repoPath + "/traffic/clones":
+			http.Error(w, "boom", http.StatusBadGateway)
+		case "/repos/" + repoPath + "/traffic/popular/referrers", "/repos/" + repoPath + "/traffic/popular/paths":
+			_ = json.NewEncoder(w).Encode([]interface{}{})
+		default:
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	db, err := store.Open(filepath.Join(t.TempDir(), "clones.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	gh := github.NewClient("tok")
+	gh.BaseURL = srv.URL
+	if _, err := Run(gh, db, Options{Repos: []string{repoPath}}, nil); err == nil {
+		t.Fatal("Run should report a partial traffic failure")
+	}
+	views, _ := db.TrafficMetricState(repoPath, "views")
+	clones, _ := db.TrafficMetricState(repoPath, "clones")
+	if views.LastStatus != "success" || clones.LastStatus != "failed" {
+		t.Fatalf("views=%+v clones=%+v", views, clones)
 	}
 }
 

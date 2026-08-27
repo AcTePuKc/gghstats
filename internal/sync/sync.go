@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -74,7 +75,10 @@ func Run(gh *github.Client, db *store.Store, opts Options, rec ErrRecorder) (Run
 	}
 
 	slog.Info("sync completed", "repos", len(repos), "failed", result.ReposFailed)
-	result.Success = true
+	result.Success = result.ReposFailed == 0
+	if !result.Success {
+		return result, fmt.Errorf("sync completed with %d failed repository traffic fetch(es)", result.ReposFailed)
+	}
 	return result, nil
 }
 
@@ -129,7 +133,7 @@ func resolveRepos(gh *github.Client, opts Options) ([]github.Repo, error) {
 
 func syncRepo(gh *github.Client, db *store.Store, repo github.Repo, today string, syncStars bool, rec ErrRecorder) error {
 	name := repo.FullName
-	slog.Info("syncing", "repo", name)
+	slog.Info("syncing repository")
 
 	repo, err := ensureRepoMetadata(gh, repo, rec)
 	if err != nil {
@@ -138,10 +142,10 @@ func syncRepo(gh *github.Client, db *store.Store, repo github.Repo, today string
 	if err := upsertRepoRecord(gh, db, repo, rec); err != nil {
 		return err
 	}
-	syncRepoTraffic(gh, db, name, rec)
+	trafficErr := syncRepoTraffic(gh, db, name, rec)
 	syncRepoSnapshots(gh, db, name, today, rec)
 	syncRepoStars(gh, db, repo, name, today, syncStars, rec)
-	return nil
+	return trafficErr
 }
 
 func ensureRepoMetadata(gh *github.Client, repo github.Repo, rec ErrRecorder) (github.Repo, error) {
@@ -161,53 +165,74 @@ func upsertRepoRecord(gh *github.Client, db *store.Store, repo github.Repo, rec 
 	prs, err := gh.OpenPullRequests(name)
 	if err != nil {
 		recordSyncErr(rec, "open_prs")
-		slog.Warn("open PRs failed", "repo", name, "error", err)
+		slog.Warn("open PRs failed")
 		prs = nil
 	}
 	issuesOnly := repo.OpenIssuesCount - len(prs)
 	if issuesOnly < 0 {
 		issuesOnly = 0
 	}
-	if err := db.UpsertRepo(
+	if err := db.UpsertRepoWithVisibility(
 		name, repo.DescriptionOrEmpty(),
 		repo.StargazersCount, repo.ForksCount, repo.WatchersCount,
 		issuesOnly, len(prs),
 		repo.Fork, repo.Archived,
-		repo.ParentFullName(),
+		repo.ParentFullName(), store.NormalizeGitHubVisibility(repo.Visibility, repo.Private),
 	); err != nil {
 		return fmt.Errorf("upsert repo: %w", err)
 	}
 	return nil
 }
 
-func syncRepoTraffic(gh *github.Client, db *store.Store, name string, rec ErrRecorder) {
+func syncRepoTraffic(gh *github.Client, db *store.Store, name string, rec ErrRecorder) error {
+	now := time.Now().UTC()
+	coverageFrom := now.AddDate(0, 0, -13).Format("2006-01-02")
+	coverageTo := now.Format("2006-01-02")
+	var errs []error
 	views, err := gh.Views(name)
 	if err != nil {
 		recordSyncErr(rec, "views")
-		slog.Warn("views failed", "repo", name, "error", err)
+		slog.Warn("views failed")
+		if stateErr := db.RecordTrafficMetricFailure(name, "views", err); stateErr != nil {
+			slog.Error("record views failure")
+		}
+		errs = append(errs, fmt.Errorf("views: %w", err))
 	} else {
+		rows := make([]store.DayRow, 0, len(views.Views))
 		for _, v := range views.Views {
 			d := v.Timestamp.UTC().Format("2006-01-02")
-			db.UpsertView(name, d, v.Count, v.Uniques)
+			rows = append(rows, store.DayRow{Date: d, Count: v.Count, Uniques: v.Uniques})
+		}
+		if err := db.RecordTrafficMetricSuccess(name, "views", rows, now, coverageFrom, coverageTo); err != nil {
+			errs = append(errs, fmt.Errorf("persist views: %w", err))
 		}
 	}
 	clones, err := gh.Clones(name)
 	if err != nil {
 		recordSyncErr(rec, "clones")
-		slog.Warn("clones failed", "repo", name, "error", err)
+		slog.Warn("clones failed")
+		if stateErr := db.RecordTrafficMetricFailure(name, "clones", err); stateErr != nil {
+			slog.Error("record clones failure")
+		}
+		errs = append(errs, fmt.Errorf("clones: %w", err))
 	} else {
+		rows := make([]store.DayRow, 0, len(clones.Clones))
 		for _, c := range clones.Clones {
 			d := c.Timestamp.UTC().Format("2006-01-02")
-			db.UpsertClone(name, d, c.Count, c.Uniques)
+			rows = append(rows, store.DayRow{Date: d, Count: c.Count, Uniques: c.Uniques})
+		}
+		if err := db.RecordTrafficMetricSuccess(name, "clones", rows, now, coverageFrom, coverageTo); err != nil {
+			errs = append(errs, fmt.Errorf("persist clones: %w", err))
 		}
 	}
+	return errors.Join(errs...)
 }
 
 func syncRepoSnapshots(gh *github.Client, db *store.Store, name, today string, rec ErrRecorder) {
 	refs, err := gh.Referrers(name)
 	if err != nil {
 		recordSyncErr(rec, "referrers")
-		slog.Warn("referrers failed", "repo", name, "error", err)
+		slog.Warn("referrers failed")
 	} else {
 		for _, r := range refs {
 			db.UpsertReferrer(name, today, r.Referrer, r.Count, r.Uniques)
@@ -216,7 +241,7 @@ func syncRepoSnapshots(gh *github.Client, db *store.Store, name, today string, r
 	paths, err := gh.PopularPaths(name)
 	if err != nil {
 		recordSyncErr(rec, "paths")
-		slog.Warn("paths failed", "repo", name, "error", err)
+		slog.Warn("paths failed")
 	} else {
 		for _, p := range paths {
 			db.UpsertPath(name, today, p.Path, p.Title, p.Count, p.Uniques)
@@ -233,13 +258,13 @@ func syncRepoStars(gh *github.Client, db *store.Store, repo github.Repo, name, t
 	cursor, err := db.GetStarSyncCursor(name)
 	if err != nil {
 		recordSyncErr(rec, "stargazers")
-		slog.Warn("stargazers cursor read failed", "repo", name, "error", err)
+		slog.Warn("stargazers cursor read failed")
 		return
 	}
 
 	current := repo.StargazersCount
 	if cursor.Synced && current == cursor.LastSeenStarCount {
-		slog.Info("stargazers skipped", "repo", name, "reason", "count_unchanged", "count", current)
+		slog.Info("stargazers skipped", "reason", "count_unchanged", "count", current)
 		return
 	}
 
@@ -248,14 +273,14 @@ func syncRepoStars(gh *github.Client, db *store.Store, repo github.Repo, name, t
 		stars, err := gh.Stargazers(name)
 		if err != nil {
 			recordSyncErr(rec, "stargazers")
-			slog.Warn("stargazers failed", "repo", name, "error", err)
+			slog.Warn("stargazers failed")
 			return
 		}
 		storeStarHistory(db, name, stars)
 		if err := db.SetStarSyncCursor(name, current, newestStarredAt(stars)); err != nil {
-			slog.Warn("stargazers cursor write failed", "repo", name, "error", err)
+			slog.Warn("stargazers cursor write failed")
 		}
-		slog.Info("stargazers synced", "repo", name, "mode", "full", "stars", len(stars), "count", current)
+		slog.Info("stargazers synced", "mode", "full", "stars", len(stars), "count", current)
 		return
 	}
 
@@ -263,11 +288,11 @@ func syncRepoStars(gh *github.Client, db *store.Store, repo github.Repo, name, t
 	stars, err := gh.StargazersRecent(name, delta, cursor.LastStarredAt)
 	if err != nil {
 		recordSyncErr(rec, "stargazers")
-		slog.Warn("stargazers failed", "repo", name, "error", err)
+		slog.Warn("stargazers failed")
 		return
 	}
 	if len(stars) == 0 && delta > 0 {
-		slog.Warn("stargazers incremental empty", "repo", name, "delta", delta)
+		slog.Warn("stargazers incremental empty", "delta", delta)
 		return
 	}
 	storeStarHistoryIncremental(db, name, stars, cursor.LastSeenStarCount)
@@ -276,9 +301,9 @@ func syncRepoStars(gh *github.Client, db *store.Store, repo github.Repo, name, t
 		newest = cursor.LastStarredAt
 	}
 	if err := db.SetStarSyncCursor(name, current, newest); err != nil {
-		slog.Warn("stargazers cursor write failed", "repo", name, "error", err)
+		slog.Warn("stargazers cursor write failed")
 	}
-	slog.Info("stargazers synced", "repo", name, "mode", "incremental", "new", len(stars), "count", current)
+	slog.Info("stargazers synced", "mode", "incremental", "new", len(stars), "count", current)
 }
 
 // recordSyncErr is a nil-safe wrapper that increments the per-kind error

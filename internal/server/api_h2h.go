@@ -30,6 +30,20 @@ func handleAPIH2H(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "same repo")
 			return
 		}
+		visibleA, err := db.ReportRepoByName(cfg.ReportVisibility, repoA)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database error")
+			return
+		}
+		visibleB, err := db.ReportRepoByName(cfg.ReportVisibility, repoB)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database error")
+			return
+		}
+		if visibleA == nil || visibleB == nil {
+			writeJSONNotFound(w)
+			return
+		}
 
 		mA, err := h2h.LoadRepoMetrics(db, repoA)
 		if err != nil {

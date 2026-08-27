@@ -432,7 +432,20 @@ touching `/` KPIs.
 gghstats repo add hrodrig/extra-one     # pin into the traffic set
 gghstats featured add hrodrig/awesome-readme   # showcase on /featured
 gghstats repo ls && gghstats featured ls
+gghstats repo report ls
+gghstats repo report set hrodrig/extra-one exclude
 ```
+
+### Report visibility
+
+Collection (`GGHSTATS_INCLUDE_PRIVATE`, `GGHSTATS_FILTER`, pins, and manual
+fetch) controls what is retained locally. Reporting is a separate, fail-closed
+boundary: public repositories with `inherit` are shown; private repositories
+need `GGHSTATS_REPORT_PRIVATE=true` or an explicit `include`; `unknown` is
+hidden; and `exclude` always wins. Use `gghstats repo report set OWNER/REPO
+inherit|include|exclude` to change a stored repository immediately. The policy
+is applied server-side to pages, APIs, exports, badges, metrics, sitemap, H2H,
+and reporting alerts; excluded direct requests respond as not found.
 
 Full reference — semantics, `--db`/`GGHSTATS_DB`, metadata sync, nav
 hide-when-empty, and troubleshooting — lives in
@@ -509,6 +522,7 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 | `GGHSTATS_PORT` | `8080` | Listen port |
 | `GGHSTATS_FILTER` | `*` | Repo filter expression |
 | `GGHSTATS_INCLUDE_PRIVATE` | `false` | Include private repos |
+| `GGHSTATS_REPORT_PRIVATE` | `false` | Include inherited private repositories in reports. Collection is separate; unknown visibility remains hidden until refreshed or explicitly included. |
 | `GGHSTATS_SYNC_INTERVAL` | `1h` | Sync frequency |
 | `GGHSTATS_SYNC_ON_STARTUP` | `true` | Full sync when the process starts; set `false` to serve immediately using existing SQLite data |
 | `GGHSTATS_SYNC_WORKERS` | `4` | Concurrent repos per sync cycle (same as `gghstats serve --sync-workers`) |
@@ -924,7 +938,7 @@ On each repository page, the **Embed badge** card builds this Markdown (metric s
 | `clones` | array | Daily clone rows: `date`, `count`, `uniques` (GitHub traffic semantics). |
 | `views` | array | Daily view rows: same shape. |
 
-Missing days in the window are omitted (not zero-filled). This matches the repo detail charts, which only plot days with rows in the database.
+Missing days in the window are omitted (not zero-filled). Each metric also includes freshness metadata: fetch time, endpoint status, latest observed/completed UTC day, and missing completed days. Repository detail charts retain the UTC calendar: explicit `0` is confirmed zero traffic and an unreported day is rendered as a gap (`null`). H2H scoring and momentum intentionally retain their documented missing-day-as-zero calculation.
 
 ```bash
 curl -sS -H "x-api-token: $GGHSTATS_API_TOKEN" \

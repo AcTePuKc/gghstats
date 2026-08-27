@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/hrodrig/gghstats/internal/h2h"
 	"github.com/hrodrig/gghstats/internal/store"
@@ -17,7 +18,7 @@ func handleAPIRepo(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "invalid path")
 			return
 		}
-		summary, err := db.RepoByName(fullName)
+		summary, err := db.ReportRepoByName(cfg.ReportVisibility, fullName)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
@@ -29,6 +30,14 @@ func handleAPIRepo(cfg Config) http.HandlerFunc {
 
 		resp := map[string]interface{}{
 			"repo": summary,
+		}
+		viewsFreshness, clonesFreshness, freshErr := repoTrafficFreshness(db, fullName, time.Now().UTC())
+		if freshErr != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database error")
+			return
+		}
+		resp["traffic"] = map[string]trafficFreshness{
+			"views": viewsFreshness, "clones": clonesFreshness,
 		}
 		if m, err := h2h.LoadRepoMetrics(db, fullName); err != nil {
 			slog.Warn("api repo momentum", "repo", fullName, "error", err)
@@ -51,7 +60,7 @@ func handleAPIRepoStars(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "invalid path")
 			return
 		}
-		summary, err := db.RepoByName(fullName)
+		summary, err := db.ReportRepoByName(cfg.ReportVisibility, fullName)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
@@ -83,7 +92,7 @@ func handleAPIRepoPopular(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "invalid path")
 			return
 		}
-		summary, err := db.RepoByName(fullName)
+		summary, err := db.ReportRepoByName(cfg.ReportVisibility, fullName)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
