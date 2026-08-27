@@ -11,7 +11,7 @@ func handleAPIIndexClonesChart(cfg Config) http.HandlerFunc {
 	db := cfg.Store
 	return func(w http.ResponseWriter, r *http.Request) {
 		sort, dir, query, _, _, _ := parseAPIReposQuery(r)
-		repos, err := loadFilteredIndexRepos(db, sort, dir, query)
+		repos, err := loadFilteredIndexRepos(db, cfg.ReportVisibility, sort, dir, query)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return

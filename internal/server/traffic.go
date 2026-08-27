@@ -17,12 +17,14 @@ const (
 )
 
 type repoTrafficResponse struct {
-	Name   string         `json:"name"`
-	Days   int            `json:"days"`
-	From   string         `json:"from"`
-	To     string         `json:"to"`
-	Clones []store.DayRow `json:"clones"`
-	Views  []store.DayRow `json:"views"`
+	Name            string           `json:"name"`
+	Days            int              `json:"days"`
+	From            string           `json:"from"`
+	To              string           `json:"to"`
+	Clones          []store.DayRow   `json:"clones"`
+	Views           []store.DayRow   `json:"views"`
+	ClonesFreshness trafficFreshness `json:"clones_freshness"`
+	ViewsFreshness  trafficFreshness `json:"views_freshness"`
 }
 
 func repoFullNameFromRequest(r *http.Request) string {
@@ -76,7 +78,7 @@ func handleAPIRepoTraffic(cfg Config) http.HandlerFunc {
 			return
 		}
 
-		summary, err := db.RepoByName(fullName)
+		summary, err := db.ReportRepoByName(cfg.ReportVisibility, fullName)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
@@ -109,13 +111,20 @@ func handleAPIRepoTraffic(cfg Config) http.HandlerFunc {
 			return
 		}
 
+		viewsFreshness, clonesFreshness, err := repoTrafficFreshness(db, fullName, time.Now().UTC())
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database error")
+			return
+		}
 		resp := repoTrafficResponse{
-			Name:   fullName,
-			Days:   days,
-			From:   from,
-			To:     to,
-			Clones: clones,
-			Views:  views,
+			Name:            fullName,
+			Days:            days,
+			From:            from,
+			To:              to,
+			Clones:          clones,
+			Views:           views,
+			ClonesFreshness: clonesFreshness,
+			ViewsFreshness:  viewsFreshness,
 		}
 		if resp.Clones == nil {
 			resp.Clones = []store.DayRow{}

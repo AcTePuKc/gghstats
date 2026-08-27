@@ -18,6 +18,8 @@ type Repo struct {
 	OpenIssuesCount int         `json:"open_issues_count"`
 	Fork            bool        `json:"fork"`
 	Archived        bool        `json:"archived"`
+	Private         bool        `json:"private"`
+	Visibility      string      `json:"visibility"`
 	Parent          *RepoParent `json:"parent"`
 }
 

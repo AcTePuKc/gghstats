@@ -845,7 +845,9 @@ function renderMetrics(canvasId, data, uniqueCol, countCol, chartLabel) {
           data: data.map(d => d[countCol]),
           backgroundColor: c.info,
           borderWidth: 0,
-          borderRadius: 4
+          borderRadius: 4,
+          // JSON null denotes an unreported/unknown UTC day; Chart.js leaves a gap.
+          spanGaps: false
         }
       ]
     },

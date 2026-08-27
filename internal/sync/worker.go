@@ -58,7 +58,7 @@ func runWorkers(ctx context.Context, repos []github.Repo, opts workerOptions) {
 						opts.Metrics.ObserveSyncError("worker")
 						opts.Metrics.ObserveSyncRepo("error")
 					}
-					slog.Error("sync repo failed", "repo", repo.FullName, "error", err)
+					slog.Error("sync repo failed")
 				} else if opts.Metrics != nil {
 					opts.Metrics.ObserveSyncRepo("success")
 				}

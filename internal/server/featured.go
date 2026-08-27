@@ -49,7 +49,7 @@ func handleFeaturedPage(cfg Config, db *store.Store, tmpl *template.Template) ht
 		}
 
 		sort, dir, query, page, perPage := parseFeaturedQueryParams(r)
-		featured, total, err := db.FilterFeatured(query, sort, dir, page, perPage)
+		featured, total, err := db.FilterReportFeatured(cfg.ReportVisibility, query, sort, dir, page, perPage)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

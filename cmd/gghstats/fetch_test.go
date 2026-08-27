@@ -230,6 +230,64 @@ func TestFetchStoreClonesAPIError(t *testing.T) {
 	}
 }
 
+func TestFetchStoreTrafficPreservesSuccessfulSibling(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/o/r/traffic/views":
+			http.Error(w, "bad", http.StatusBadGateway)
+		case "/repos/o/r/traffic/clones":
+			_ = json.NewEncoder(w).Encode(github.TrafficClones{Clones: []github.DailyStat{{Timestamp: time.Date(2026, 8, 26, 0, 0, 0, 0, time.UTC), Count: 3, Uniques: 2}}})
+		default:
+			t.Fatalf("unexpected %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	c := github.NewClient("t")
+	c.BaseURL = srv.URL
+	s := tempFetchStore(t)
+	if err := fetchStoreTraffic(c, s, "o/r"); err == nil {
+		t.Fatal("expected views error")
+	}
+	rows, err := s.ClonesByRange("o/r", "2026-08-26", "2026-08-26")
+	if err != nil || len(rows) != 1 || rows[0].Count != 3 {
+		t.Fatalf("clones=%+v err=%v", rows, err)
+	}
+	views, _ := s.TrafficMetricState("o/r", "views")
+	clones, _ := s.TrafficMetricState("o/r", "clones")
+	if views.LastStatus != "failed" || clones.LastStatus != "success" {
+		t.Fatalf("views=%+v clones=%+v", views, clones)
+	}
+}
+
+func TestFetchStoreTrafficPreservesViewsWhenClonesFail(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/repos/o/r/traffic/views":
+			_ = json.NewEncoder(w).Encode(github.TrafficViews{Views: []github.DailyStat{{Timestamp: time.Date(2026, 8, 26, 0, 0, 0, 0, time.UTC), Count: 4, Uniques: 2}}})
+		case "/repos/o/r/traffic/clones":
+			http.Error(w, "bad", http.StatusBadGateway)
+		default:
+			t.Fatalf("unexpected %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	c := github.NewClient("t")
+	c.BaseURL = srv.URL
+	s := tempFetchStore(t)
+	if err := fetchStoreTraffic(c, s, "o/r"); err == nil {
+		t.Fatal("expected clones error")
+	}
+	rows, err := s.ViewsByRange("o/r", "2026-08-26", "2026-08-26")
+	if err != nil || len(rows) != 1 || rows[0].Count != 4 {
+		t.Fatalf("views=%+v err=%v", rows, err)
+	}
+	views, _ := s.TrafficMetricState("o/r", "views")
+	clones, _ := s.TrafficMetricState("o/r", "clones")
+	if views.LastStatus != "success" || clones.LastStatus != "failed" {
+		t.Fatalf("views=%+v clones=%+v", views, clones)
+	}
+}
+
 func TestFetchStoreReferrersAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad", http.StatusBadGateway)

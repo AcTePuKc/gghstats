@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -30,10 +31,7 @@ func runFetch(args []string) error {
 	if err := upsertRepoFromGitHub(gh, db, gf.Repo); err != nil {
 		return err
 	}
-	if err := fetchStoreViews(gh, db, gf.Repo); err != nil {
-		return err
-	}
-	if err := fetchStoreClones(gh, db, gf.Repo); err != nil {
+	if err := fetchStoreTraffic(gh, db, gf.Repo); err != nil {
 		return err
 	}
 	if err := fetchStoreReferrers(gh, db, gf.Repo, today); err != nil {
@@ -44,6 +42,19 @@ func runFetch(args []string) error {
 	}
 	fmt.Printf("\nData saved to %s\n", gf.DB)
 	return nil
+}
+
+// fetchStoreTraffic attempts both independent GitHub traffic endpoints so a
+// failed metric cannot discard its successfully fetched sibling.
+func fetchStoreTraffic(gh *github.Client, db *store.Store, repo string) error {
+	var errs []error
+	if err := fetchStoreViews(gh, db, repo); err != nil {
+		errs = append(errs, err)
+	}
+	if err := fetchStoreClones(gh, db, repo); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func upsertRepoFromGitHub(gh *github.Client, db *store.Store, repo string) error {
@@ -59,12 +70,12 @@ func upsertRepoFromGitHub(gh *github.Client, db *store.Store, repo string) error
 	if issuesOnly < 0 {
 		issuesOnly = 0
 	}
-	if err := db.UpsertRepo(
+	if err := db.UpsertRepoWithVisibility(
 		meta.FullName, meta.DescriptionOrEmpty(),
 		meta.StargazersCount, meta.ForksCount, meta.WatchersCount,
 		issuesOnly, len(prs),
 		meta.Fork, meta.Archived,
-		meta.ParentFullName(),
+		meta.ParentFullName(), store.NormalizeGitHubVisibility(meta.Visibility, meta.Private),
 	); err != nil {
 		return fmt.Errorf("store repo metadata: %w", err)
 	}
@@ -74,13 +85,16 @@ func upsertRepoFromGitHub(gh *github.Client, db *store.Store, repo string) error
 func fetchStoreViews(gh *github.Client, db *store.Store, repo string) error {
 	views, err := gh.Views(repo)
 	if err != nil {
+		_ = db.RecordTrafficMetricFailure(repo, "views", err)
 		return fmt.Errorf("fetch views: %w", err)
 	}
+	rows := make([]store.DayRow, 0, len(views.Views))
 	for _, v := range views.Views {
-		d := v.Timestamp.Format("2006-01-02")
-		if err := db.UpsertView(repo, d, v.Count, v.Uniques); err != nil {
-			return fmt.Errorf("store view %s: %w", d, err)
-		}
+		rows = append(rows, store.DayRow{Date: v.Timestamp.UTC().Format("2006-01-02"), Count: v.Count, Uniques: v.Uniques})
+	}
+	now := time.Now().UTC()
+	if err := db.RecordTrafficMetricSuccess(repo, "views", rows, now, now.AddDate(0, 0, -13).Format("2006-01-02"), now.Format("2006-01-02")); err != nil {
+		return fmt.Errorf("store views: %w", err)
 	}
 	fmt.Printf("views:     %d days stored (total: %d, uniques: %d)\n",
 		len(views.Views), views.Count, views.Uniques)
@@ -90,13 +104,16 @@ func fetchStoreViews(gh *github.Client, db *store.Store, repo string) error {
 func fetchStoreClones(gh *github.Client, db *store.Store, repo string) error {
 	clones, err := gh.Clones(repo)
 	if err != nil {
+		_ = db.RecordTrafficMetricFailure(repo, "clones", err)
 		return fmt.Errorf("fetch clones: %w", err)
 	}
+	rows := make([]store.DayRow, 0, len(clones.Clones))
 	for _, c := range clones.Clones {
-		d := c.Timestamp.Format("2006-01-02")
-		if err := db.UpsertClone(repo, d, c.Count, c.Uniques); err != nil {
-			return fmt.Errorf("store clone %s: %w", d, err)
-		}
+		rows = append(rows, store.DayRow{Date: c.Timestamp.UTC().Format("2006-01-02"), Count: c.Count, Uniques: c.Uniques})
+	}
+	now := time.Now().UTC()
+	if err := db.RecordTrafficMetricSuccess(repo, "clones", rows, now, now.AddDate(0, 0, -13).Format("2006-01-02"), now.Format("2006-01-02")); err != nil {
+		return fmt.Errorf("store clones: %w", err)
 	}
 	fmt.Printf("clones:    %d days stored (total: %d, uniques: %d)\n",
 		len(clones.Clones), clones.Count, clones.Uniques)

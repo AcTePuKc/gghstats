@@ -14,6 +14,11 @@
         <p class="text-muted small mb-2 fork-of" data-gghstats-role="fork-label">{{call .T "repo.fork_of"}} <a href="https://github.com/{{.Repo.ParentFullName}}" target="_blank" rel="noopener noreferrer" title="{{.Repo.ParentFullName}}">{{.Repo.ParentFullName}}</a></p>
         {{end}}
         {{if .Repo.Description}}<p class="text-secondary mb-4">{{.Repo.Description}}</p>{{end}}
+        <div class="small text-muted mb-3" data-gghstats-role="traffic-freshness">
+          <span class="fw-semibold">Traffic:</span>
+          <span>Views {{.ViewsFreshness.DisplayStatus}}</span>{{if .ViewsFreshness.FetchedAt}} <span>({{.ViewsFreshness.FetchedAt}})</span>{{end}}{{if .ViewsFreshness.MissingCompletedDays}} <span>— missing {{len .ViewsFreshness.MissingCompletedDays}} completed day(s)</span>{{end}}{{if .ViewsFreshness.Error}} <span>— {{.ViewsFreshness.Error}}</span>{{end}};
+          <span>Clones {{.ClonesFreshness.DisplayStatus}}</span>{{if .ClonesFreshness.FetchedAt}} <span>({{.ClonesFreshness.FetchedAt}})</span>{{end}}{{if .ClonesFreshness.MissingCompletedDays}} <span>— missing {{len .ClonesFreshness.MissingCompletedDays}} completed day(s)</span>{{end}}{{if .ClonesFreshness.Error}} <span>— {{.ClonesFreshness.Error}}</span>{{end}}.
+        </div>
         <div class="row g-3">
           <div class="col-6 col-md-3">
             <div class="app-brutal-stat p-3 text-center h-100" data-gghstats-role="stat-card">

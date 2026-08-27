@@ -36,6 +36,8 @@ func pageCanonicalURL(base string, r *http.Request, pageID string) string {
 		return h2hCanonicalURL(base, r.URL.Query())
 	case "repo":
 		return base + path
+	case "not_found":
+		return base + "/"
 	default:
 		return base + path
 	}

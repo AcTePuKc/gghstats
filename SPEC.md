@@ -97,7 +97,7 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 
 - Same auth gate as `/api/repos`.
 - Query `days`: UTC rolling window (default **30**); **0** = all stored days; max **3660**.
-- **200** JSON: `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`). Missing days omitted (not zero-filled).
+- **200** JSON: `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`) plus `clones_freshness` / `views_freshness`. Freshness exposes the last successful fetch, last observed day, last completed UTC day, endpoint status, and missing completed days. Missing days remain omitted (not zero-filled).
 
 ### 3.5 `POST /api/v1/sync` and `GET /api/v1/sync`
 
