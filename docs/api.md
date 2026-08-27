@@ -51,6 +51,16 @@ x-api-token: your-api-token
 
 **Public without token:** `GET /api/v1/healthz`, `GET /metrics` (unless disabled), and badges when `GGHSTATS_BADGE_PUBLIC=true` (default).
 
+## Report visibility applies to every reporting route
+
+The server filters report data before it is rendered or serialized. A repository
+that is excluded by its stored report policy, or hidden by the default
+private/unknown policy, is absent from lists, totals, exports, charts, H2H,
+Featured, badges, metrics, and sitemap. Direct repo/badge/API paths return the
+same **404** as an unknown repository; clients must not use a 404 to infer
+whether a repository exists locally. See [README report visibility](../README.md#report-visibility)
+for policy precedence and `GGHSTATS_REPORT_PRIVATE`.
+
 **Browser SPAs:** do **not** put `GGHSTATS_API_TOKEN` in a public bundle. Use a BFF/proxy that adds `x-api-token`, or restrict CORS. With `GGHSTATS_API_ONLY` and open CORS (`*`), `serve` logs a startup warning.
 
 A matching `x-api-token` also **bypasses the IP whitelist** on protected paths (token is still validated).
@@ -131,7 +141,9 @@ curl -sS "$BASE/api/v1/healthz"
 
 ### `GET /api/repos`
 
-List repositories with aggregate KPIs (dogfood for the index).
+List report-visible repositories with aggregate KPIs (dogfood for the index).
+`items`, `total_count`, and every total exclude repositories hidden by report
+policy or inherited private/unknown visibility.
 
 **Query**
 
@@ -189,7 +201,10 @@ curl -sS -H "x-api-token: $TOKEN" \
 
 ### `GET /api/v1/charts/index-clones`
 
-Aggregated daily clones across the **same filter** as `/api/repos` (`sort`/`dir`/`q`). No pagination.
+Aggregated daily clones across the **same report scope and filter** as
+`/api/repos` (`sort`/`dir`/`q`). No pagination. It is an aggregate, not a
+coverage audit: use a repository traffic response when a partial GitHub window
+would matter.
 
 ```bash
 curl -sS -H "x-api-token: $TOKEN" \
@@ -248,7 +263,7 @@ curl -sS -H "x-api-token: $TOKEN" \
 }
 ```
 
-Unknown repo → **404** `{"error":"not_found"}`.
+Unknown or non-report-visible repo → **404** `{"error":"not_found"}`.
 
 ---
 
@@ -276,11 +291,33 @@ curl -sS -H "x-api-token: $TOKEN" \
   ],
   "views": [
     {"date": "2026-07-01", "count": 50, "uniques": 20}
-  ]
+  ],
+  "clones_freshness": {
+    "metric": "clones",
+    "status": "fresh",
+    "fetched_at": "2026-07-22T12:00:00Z",
+    "latest_observed_day": "2026-07-21",
+    "latest_completed_utc_day": "2026-07-21",
+    "missing_completed_days": []
+  },
+  "views_freshness": {
+    "metric": "views",
+    "status": "missing",
+    "fetched_at": "2026-07-22T12:00:00Z",
+    "latest_observed_day": "2026-07-21",
+    "latest_completed_utc_day": "2026-07-21",
+    "missing_completed_days": ["2026-07-20"]
+  }
 }
 ```
 
-Missing calendar days are **omitted** (not zero-filled).
+`clones_freshness` and `views_freshness` are independent. Their `status` is
+`fresh`, `delayed`, `missing`, `failed`, or `never`; a failed metric also has
+an `error` field. `latest_completed_utc_day` is UTC yesterday, so today never
+counts as missing. Missing calendar days are **omitted** by this API (not
+zero-filled): an explicit `count: 0` is confirmed zero traffic, while absence
+is unknown. The HTML detail chart keeps all UTC dates and sends unknown values
+as `null` so they render as gaps.
 
 ---
 
@@ -396,7 +433,9 @@ Scores are **shares 0–100 that sum to 100** (same formula as the HTML H2H page
 
 ### `GET /api/v1/featured`
 
-Featured showcase list (dogfood for HTML `/featured`). **Metadata only** — no traffic clones/views.
+Featured showcase list (dogfood for HTML `/featured`). **Metadata only** — no
+traffic clones/views. The list and `total_count` include only report-visible
+entries, so the catalog cannot expose an excluded repository.
 
 | Param | Default | Notes |
 |-------|---------|--------|
@@ -486,7 +525,7 @@ curl -sS "$BASE/api/v1/badge/hrodrig/gghstats?metric=clones" -o badge.svg
 | `style` | `flat`, `flat-square` | `flat` |
 | `label` | custom left text | metric name |
 
-Set `GGHSTATS_BADGE_PUBLIC=false` to require `x-api-token` (breaks raw GitHub image embeds without a proxy).
+Set `GGHSTATS_BADGE_PUBLIC=false` to require `x-api-token` (breaks raw GitHub image embeds without a proxy). A non-report-visible repository returns 404 even when badges are public.
 
 ---
 
