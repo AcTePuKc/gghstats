@@ -418,6 +418,20 @@ func (s *Store) TrafficCoverageDates(repo, metric, seenAt string) (map[string]bo
 	return out, rows.Err()
 }
 
+// TrafficCoverageBounds returns the first and last UTC dates explicitly present
+// in one GitHub traffic response. Empty responses have no observed span.
+func TrafficCoverageBounds(rows []DayRow) (from, to string) {
+	for _, row := range rows {
+		if from == "" || row.Date < from {
+			from = row.Date
+		}
+		if row.Date > to {
+			to = row.Date
+		}
+	}
+	return from, to
+}
+
 // UpsertReferrer inserts or replaces a referrer entry for a given date.
 func (s *Store) UpsertReferrer(repo, date, referrer string, count, uniques int) error {
 	_, err := s.db.Exec(

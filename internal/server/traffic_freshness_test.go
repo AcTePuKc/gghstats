@@ -2,6 +2,9 @@ package server
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,8 +14,9 @@ import (
 func TestTrafficFreshnessDistinguishesMissingCompletedDayFromZero(t *testing.T) {
 	db := testStore(t)
 	now := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
-	// The 25th was explicitly reported as zero; the 26th was not reported.
-	err := db.RecordTrafficMetricSuccess("o/r", "views", []store.DayRow{{Date: "2026-08-25", Count: 0, Uniques: 0}}, now, "2026-08-25", "2026-08-27")
+	// The 25th was explicitly reported as zero; the 26th was absent inside the
+	// observed response span, whose final day (27th) is still the current day.
+	err := db.RecordTrafficMetricSuccess("o/r", "views", []store.DayRow{{Date: "2026-08-25", Count: 0, Uniques: 0}, {Date: "2026-08-27", Count: 3, Uniques: 1}}, now, "2026-08-25", "2026-08-27")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,6 +26,22 @@ func TestTrafficFreshnessDistinguishesMissingCompletedDayFromZero(t *testing.T) 
 	}
 	if f.Status != "missing" || len(f.MissingCompletedDays) != 1 || f.MissingCompletedDays[0] != "2026-08-26" {
 		t.Fatalf("freshness=%+v", f)
+	}
+}
+
+func TestTrafficFreshnessTreatsUnpublishedCompletedDayAsDelayed(t *testing.T) {
+	db := testStore(t)
+	now := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
+	// GitHub has only published through the 25th. The 26th is delayed, not a
+	// missing row, because it is beyond the response's actual observed span.
+	rows := []store.DayRow{{Date: "2026-08-25", Count: 0, Uniques: 0}}
+	from, to := store.TrafficCoverageBounds(rows)
+	if err := db.RecordTrafficMetricSuccess("o/r", "views", rows, now, from, to); err != nil {
+		t.Fatal(err)
+	}
+	f, err := trafficFreshnessFor(db, "o/r", "views", now)
+	if err != nil || f.Status != "delayed" || len(f.MissingCompletedDays) != 0 {
+		t.Fatalf("freshness=%+v err=%v", f, err)
 	}
 }
 
@@ -79,5 +99,33 @@ func TestDenseTrafficChartHidesCachedRowOmittedByLatestCoverage(t *testing.T) {
 	}
 	if points[0].Count == nil || *points[0].Count != 0 || points[1].Count != nil {
 		t.Fatalf("points=%+v", points)
+	}
+}
+
+func TestTrafficFreshnessUIIsLocalizedWithSingularMissingDay(t *testing.T) {
+	db := testStore(t)
+	if err := db.UpsertRepo("o/r", "", 0, 0, 0, 0, 0, false, false, ""); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	rows := []store.DayRow{
+		{Date: now.AddDate(0, 0, -3).Format("2006-01-02"), Count: 0, Uniques: 0},
+		{Date: now.AddDate(0, 0, -1).Format("2006-01-02"), Count: 2, Uniques: 1},
+	}
+	from, to := store.TrafficCoverageBounds(rows)
+	if err := db.RecordTrafficMetricSuccess("o/r", "views", rows, now, from, to); err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{Store: db, DefaultLocale: "de", EnabledLocales: []string{"de"}})
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/o/r?lang=de", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Datenverkehr", "Aufrufe", "Abgeschlossene Tage fehlen", "1 abgeschlossener Tag fehlt"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing localized freshness text %q in %s", want, body)
+		}
 	}
 }

@@ -9,6 +9,15 @@ import (
 	"github.com/hrodrig/gghstats/internal/store"
 )
 
+const excludedMetricsRepo = "secret/nope"
+
+func setTestReportPolicy(t *testing.T, db *store.Store, name, policy string) {
+	t.Helper()
+	if ok, err := db.SetRepoReportPolicy(name, policy); err != nil || !ok {
+		t.Fatalf("set %s=%s: ok=%v err=%v", name, policy, ok, err)
+	}
+}
+
 func TestExcludedRepositoryDoesNotLeakAcrossReportRoutes(t *testing.T) {
 	db := testStore(t)
 	if err := db.UpsertRepoWithVisibility("public/ok", "shown", 1, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
@@ -54,13 +63,13 @@ func TestExcludedRepositoryDoesNotLeakAcrossReportRoutes(t *testing.T) {
 	}
 }
 
-func TestMetricsDoesNotLeakExcludedRepositoryOrFilter(t *testing.T) {
+func metricsVisibilityFixture(t *testing.T) (*store.Store, http.Handler) {
+	t.Helper()
 	db := testStore(t)
-	const repo = "secret/nope"
-	if err := db.UpsertRepoWithVisibility(repo, "must not leak", 1, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+	if err := db.UpsertRepoWithVisibility(excludedMetricsRepo, "must not leak", 1, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.UpsertView(repo, "2026-08-26", 7, 3); err != nil {
+	if err := db.UpsertView(excludedMetricsRepo, "2026-08-26", 7, 3); err != nil {
 		t.Fatal(err)
 	}
 	reg, dom := NewMetricsRegistry(MetricsRegistryConfig{
@@ -68,37 +77,39 @@ func TestMetricsDoesNotLeakExcludedRepositoryOrFilter(t *testing.T) {
 		PerRepoEnabled:   true,
 		ReportVisibility: store.ReportVisibility{},
 	})
-	h := New(Config{Store: db, MetricsRegistry: reg, DomainMetrics: dom})
+	return db, New(Config{Store: db, MetricsRegistry: reg, DomainMetrics: dom})
+}
 
-	scrape := func() string {
-		t.Helper()
-		w := httptest.NewRecorder()
-		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, MetricsPath, nil))
-		if w.Code != http.StatusOK {
-			t.Fatalf("metrics status=%d", w.Code)
-		}
-		return w.Body.String()
+func scrapeMetrics(t *testing.T, h http.Handler) string {
+	t.Helper()
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, MetricsPath, nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("metrics status=%d", w.Code)
 	}
+	return w.Body.String()
+}
 
-	if ok, err := db.SetRepoReportPolicy(repo, store.ReportExclude); err != nil || !ok {
-		t.Fatalf("exclude repo: ok=%v err=%v", ok, err)
-	}
-	excluded := scrape()
-	if strings.Contains(excluded, repo) || strings.Contains(excluded, `owner="secret"`) || strings.Contains(excluded, `repo="nope"`) || strings.Contains(excluded, `filter=`) {
+func TestMetricsDoesNotLeakExcludedRepositoryOrFilter(t *testing.T) {
+	db, h := metricsVisibilityFixture(t)
+	setTestReportPolicy(t, db, excludedMetricsRepo, store.ReportExclude)
+	excluded := scrapeMetrics(t, h)
+	if strings.Contains(excluded, excludedMetricsRepo) || strings.Contains(excluded, `owner="secret"`) || strings.Contains(excluded, `repo="nope"`) || strings.Contains(excluded, `filter=`) {
 		t.Fatalf("metrics leaked excluded repo or raw filter: %s", excluded)
 	}
 	if !strings.Contains(excluded, "gghstats_repos_total 0") {
 		t.Fatalf("metrics must retain report-scoped repo total, got: %s", excluded)
 	}
+}
 
-	if ok, err := db.SetRepoReportPolicy(repo, store.ReportInclude); err != nil || !ok {
-		t.Fatalf("include repo: ok=%v err=%v", ok, err)
-	}
-	included := scrape()
+func TestMetricsRestoresIncludedRepository(t *testing.T) {
+	db, h := metricsVisibilityFixture(t)
+	setTestReportPolicy(t, db, excludedMetricsRepo, store.ReportInclude)
+	included := scrapeMetrics(t, h)
 	if !strings.Contains(included, "gghstats_repos_total 1") {
 		t.Fatalf("included repo was not counted, got: %s", included)
 	}
-	if strings.Contains(included, repo) || strings.Contains(included, `filter=`) {
+	if strings.Contains(included, excludedMetricsRepo) || strings.Contains(included, `filter=`) {
 		t.Fatalf("aggregate metrics must not expose repository configuration: %s", included)
 	}
 	if !strings.Contains(included, `owner="secret"`) || !strings.Contains(included, `repo="nope"`) {
@@ -106,7 +117,8 @@ func TestMetricsDoesNotLeakExcludedRepositoryOrFilter(t *testing.T) {
 	}
 }
 
-func TestFeaturedAPIAndSitemapRespectReportVisibility(t *testing.T) {
+func featuredVisibilityFixture(t *testing.T) http.Handler {
+	t.Helper()
 	db := testStore(t)
 	for _, repo := range []struct {
 		name       string
@@ -125,11 +137,12 @@ func TestFeaturedAPIAndSitemapRespectReportVisibility(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if ok, err := db.SetRepoReportPolicy("secret/excluded", store.ReportExclude); err != nil || !ok {
-		t.Fatalf("exclude repo: ok=%v err=%v", ok, err)
-	}
+	setTestReportPolicy(t, db, "secret/excluded", store.ReportExclude)
+	return New(Config{Store: db, APIToken: "token", DisableMetrics: true, PublicURL: "https://stats.example.com"})
+}
 
-	h := New(Config{Store: db, APIToken: "token", DisableMetrics: true, PublicURL: "https://stats.example.com"})
+func TestFeaturedAPIRespectsReportVisibility(t *testing.T) {
+	h := featuredVisibilityFixture(t)
 	apiReq := httptest.NewRequest(http.MethodGet, "/api/v1/featured", nil)
 	apiReq.Header.Set("x-api-token", "token")
 	apiRes := httptest.NewRecorder()
@@ -143,7 +156,10 @@ func TestFeaturedAPIAndSitemapRespectReportVisibility(t *testing.T) {
 	if !strings.Contains(apiRes.Body.String(), `"total_count":1`) || !strings.Contains(apiRes.Body.String(), "public/visible") {
 		t.Fatalf("featured API did not retain report-visible entry: %s", apiRes.Body.String())
 	}
+}
 
+func TestSitemapRespectsReportVisibility(t *testing.T) {
+	h := featuredVisibilityFixture(t)
 	sitemapReq := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
 	sitemapReq.Host = "stats.example.com"
 	sitemapRes := httptest.NewRecorder()

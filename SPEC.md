@@ -103,7 +103,8 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 - Query `days`: UTC rolling window (default **30**); **0** = all stored days; max **3660**.
 - **200** JSON: `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`) plus `clones_freshness` / `views_freshness`. Each freshness object has `metric`, `status`, `fetched_at`, `latest_observed_day`, `latest_completed_utc_day`, `missing_completed_days`, and optional `error`.
 - `status` is one of `fresh`, `delayed`, `missing`, `failed`, or `never`. The completed day is UTC yesterday; current UTC day never counts as missing. A returned daily row with `count: 0` is an explicit zero. An omitted date is unknown, remains omitted by this API, and is not zero-filled.
-- The repository detail chart uses an aligned UTC calendar payload: explicit zero is `0`; unknown is `null` and creates a visible gap. Inside a latest GitHub coverage window, cached rows omitted by that response must not be presented as confirmed data.
+- Each successful metric response establishes its coverage window from its actual earliest and latest returned UTC dates. A latest observed date before UTC yesterday is `delayed`; `missing` is reserved for an omitted date inside that observed span. This avoids treating not-yet-published or quiet omitted days as false missing-data warnings.
+- The repository detail chart uses an aligned UTC calendar payload: explicit zero is `0`; unknown is `null` and creates a visible gap. Both the sparse API and dense chart omit cached rows inside the latest GitHub coverage window when that response did not confirm them.
 - Views and clones are independent: a failed endpoint retains successful sibling data and records metric failure/error state. The repo and sync run are not fully successful when either traffic metric fails.
 
 ### 3.5 `POST /api/v1/sync` and `GET /api/v1/sync`

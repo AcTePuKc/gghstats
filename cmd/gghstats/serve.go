@@ -242,10 +242,8 @@ func runServe(args []string) error {
 	}
 	defer db.Close()
 
-	if cfg.Demo {
-		if err := demo.SeedIfEmpty(db); err != nil {
-			return fmt.Errorf("demo seed: %w", err)
-		}
+	if err := seedDemoIfEnabled(db, cfg.Demo); err != nil {
+		return err
 	}
 
 	var metricsReg *prometheus.Registry
@@ -367,6 +365,16 @@ func runServe(args []string) error {
 	}
 
 	return serveHTTP(ctx, srv, cfg, cancel)
+}
+
+func seedDemoIfEnabled(db *store.Store, enabled bool) error {
+	if !enabled {
+		return nil
+	}
+	if err := demo.SeedIfEmpty(db); err != nil {
+		return fmt.Errorf("demo seed: %w", err)
+	}
+	return nil
 }
 
 func reportableFailedRepos(db *store.Store, scope store.ReportVisibility, names []string) []string {

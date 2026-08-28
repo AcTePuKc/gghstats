@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hrodrig/gghstats/internal/store"
 )
 
 func TestAPIRepoTrafficUnauthorized(t *testing.T) {
@@ -187,5 +189,42 @@ func TestAPIRepoTrafficAllTime(t *testing.T) {
 	}
 	if len(resp.Clones) != 1 || len(resp.Views) != 1 {
 		t.Fatalf("clones=%d views=%d", len(resp.Clones), len(resp.Views))
+	}
+}
+
+func TestAPIRepoTrafficOmitsCachedRowOutsideLatestCoverage(t *testing.T) {
+	db := testStore(t)
+	db.UpsertRepo("a/b", "", 0, 0, 0, 0, 0, false, false, "")
+	// An earlier revision exists for the 26th, but the latest response only
+	// confirms 25th and 27th, making 26th unknown to both API and chart.
+	if err := db.UpsertView("a/b", "2026-08-26", 9, 4); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if err := db.RecordTrafficMetricSuccess("a/b", "views", []store.DayRow{{Date: "2026-08-25", Count: 0, Uniques: 0}, {Date: "2026-08-27", Count: 3, Uniques: 1}}, now, "2026-08-25", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	handler := New(Config{Store: db, APIToken: "secret"})
+	req := httptest.NewRequest("GET", "/api/v1/repos/a/b/traffic?days=0", nil)
+	req.Header.Set("x-api-token", "secret")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp repoTrafficResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Views) != 2 || resp.Views[0].Date != "2026-08-25" || resp.Views[0].Count != 0 || resp.Views[1].Date != "2026-08-27" {
+		t.Fatalf("sparse views=%+v", resp.Views)
+	}
+	rows, err := db.ViewsByRange("a/b", "2026-08-25", "2026-08-27")
+	if err != nil {
+		t.Fatal(err)
+	}
+	chart, err := denseTrafficChartWithCoverage(db, "a/b", "views", "2026-08-25", "2026-08-27", rows)
+	if err != nil || chart[1].Count != nil {
+		t.Fatalf("dense chart=%+v err=%v", chart, err)
 	}
 }

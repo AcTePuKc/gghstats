@@ -186,8 +186,6 @@ func upsertRepoRecord(gh *github.Client, db *store.Store, repo github.Repo, rec 
 
 func syncRepoTraffic(gh *github.Client, db *store.Store, name string, rec ErrRecorder) error {
 	now := time.Now().UTC()
-	coverageFrom := now.AddDate(0, 0, -13).Format("2006-01-02")
-	coverageTo := now.Format("2006-01-02")
 	var errs []error
 	views, err := gh.Views(name)
 	if err != nil {
@@ -203,6 +201,7 @@ func syncRepoTraffic(gh *github.Client, db *store.Store, name string, rec ErrRec
 			d := v.Timestamp.UTC().Format("2006-01-02")
 			rows = append(rows, store.DayRow{Date: d, Count: v.Count, Uniques: v.Uniques})
 		}
+		coverageFrom, coverageTo := store.TrafficCoverageBounds(rows)
 		if err := db.RecordTrafficMetricSuccess(name, "views", rows, now, coverageFrom, coverageTo); err != nil {
 			errs = append(errs, fmt.Errorf("persist views: %w", err))
 		}
@@ -221,6 +220,7 @@ func syncRepoTraffic(gh *github.Client, db *store.Store, name string, rec ErrRec
 			d := c.Timestamp.UTC().Format("2006-01-02")
 			rows = append(rows, store.DayRow{Date: d, Count: c.Count, Uniques: c.Uniques})
 		}
+		coverageFrom, coverageTo := store.TrafficCoverageBounds(rows)
 		if err := db.RecordTrafficMetricSuccess(name, "clones", rows, now, coverageFrom, coverageTo); err != nil {
 			errs = append(errs, fmt.Errorf("persist clones: %w", err))
 		}
