@@ -314,10 +314,14 @@ curl -sS -H "x-api-token: $TOKEN" \
 `clones_freshness` and `views_freshness` are independent. Their `status` is
 `fresh`, `delayed`, `missing`, `failed`, or `never`; a failed metric also has
 an `error` field. `latest_completed_utc_day` is UTC yesterday, so today never
-counts as missing. Missing calendar days are **omitted** by this API (not
-zero-filled): an explicit `count: 0` is confirmed zero traffic, while absence
-is unknown. The HTML detail chart keeps all UTC dates and sends unknown values
-as `null` so they render as gaps.
+counts as missing. A successful response's observed coverage span is its actual
+earliest-to-latest returned UTC date: a response not reaching yesterday is
+`delayed`, while `missing` means an absent day inside that span. Missing or
+unconfirmed calendar days are **omitted** by this API (not zero-filled): an
+explicit `count: 0` is confirmed zero traffic, while absence is unknown. Cached
+rows omitted by the latest response inside its coverage span are not returned
+as confirmed traffic. The HTML detail chart keeps all UTC dates and sends
+unknown values as `null` so they render as gaps.
 
 ---
 

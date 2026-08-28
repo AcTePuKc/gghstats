@@ -15,9 +15,9 @@
         {{end}}
         {{if .Repo.Description}}<p class="text-secondary mb-4">{{.Repo.Description}}</p>{{end}}
         <div class="small text-muted mb-3" data-gghstats-role="traffic-freshness">
-          <span class="fw-semibold">Traffic:</span>
-          <span>Views {{.ViewsFreshness.DisplayStatus}}</span>{{if .ViewsFreshness.FetchedAt}} <span>({{.ViewsFreshness.FetchedAt}})</span>{{end}}{{if .ViewsFreshness.MissingCompletedDays}} <span>— missing {{len .ViewsFreshness.MissingCompletedDays}} completed day(s)</span>{{end}}{{if .ViewsFreshness.Error}} <span>— {{.ViewsFreshness.Error}}</span>{{end}};
-          <span>Clones {{.ClonesFreshness.DisplayStatus}}</span>{{if .ClonesFreshness.FetchedAt}} <span>({{.ClonesFreshness.FetchedAt}})</span>{{end}}{{if .ClonesFreshness.MissingCompletedDays}} <span>— missing {{len .ClonesFreshness.MissingCompletedDays}} completed day(s)</span>{{end}}{{if .ClonesFreshness.Error}} <span>— {{.ClonesFreshness.Error}}</span>{{end}}.
+          <span class="fw-semibold">{{call .T "repo.traffic"}}:</span>
+          <span>{{call .T "repo.views"}} {{call .T (printf "repo.traffic_status_%s" .ViewsFreshness.Status)}}</span>{{if .ViewsFreshness.FetchedAt}} <span>({{.ViewsFreshness.FetchedAt}})</span>{{end}}{{if .ViewsFreshness.MissingCompletedDays}} <span>— {{if eq (len .ViewsFreshness.MissingCompletedDays) 1}}{{call .T "repo.traffic_missing_one"}}{{else}}{{call .Tfmt "repo.traffic_missing_many" (dict "count" (printf "%d" (len .ViewsFreshness.MissingCompletedDays)))}}{{end}}</span>{{end}}{{if .ViewsFreshness.Error}} <span>— {{.ViewsFreshness.Error}}</span>{{end}};
+          <span>{{call .T "repo.clones"}} {{call .T (printf "repo.traffic_status_%s" .ClonesFreshness.Status)}}</span>{{if .ClonesFreshness.FetchedAt}} <span>({{.ClonesFreshness.FetchedAt}})</span>{{end}}{{if .ClonesFreshness.MissingCompletedDays}} <span>— {{if eq (len .ClonesFreshness.MissingCompletedDays) 1}}{{call .T "repo.traffic_missing_one"}}{{else}}{{call .Tfmt "repo.traffic_missing_many" (dict "count" (printf "%d" (len .ClonesFreshness.MissingCompletedDays)))}}{{end}}</span>{{end}}{{if .ClonesFreshness.Error}} <span>— {{.ClonesFreshness.Error}}</span>{{end}}.
         </div>
         <div class="row g-3">
           <div class="col-6 col-md-3">

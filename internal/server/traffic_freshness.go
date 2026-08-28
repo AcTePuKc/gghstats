@@ -18,21 +18,6 @@ type trafficFreshness struct {
 	Error                 string   `json:"error,omitempty"`
 }
 
-func (f trafficFreshness) DisplayStatus() string {
-	switch f.Status {
-	case "fresh":
-		return "Fresh"
-	case "delayed":
-		return "Delayed"
-	case "missing":
-		return "Missing completed days"
-	case "failed":
-		return "Fetch failed"
-	default:
-		return "Never synced"
-	}
-}
-
 func trafficFreshnessFor(db *store.Store, repo, metric string, now time.Time) (trafficFreshness, error) {
 	st, err := db.TrafficMetricState(repo, metric)
 	if err != nil {
@@ -124,9 +109,21 @@ func denseTrafficChart(rows []store.DayRow, from, to string) []chartTrafficPoint
 // denseTrafficChartWithCoverage prevents an older cached row from disguising a
 // date omitted by GitHub's latest successful rolling response as confirmed data.
 func denseTrafficChartWithCoverage(db *store.Store, repo, metric, from, to string, rows []store.DayRow) ([]chartTrafficPoint, error) {
+	confirmed, err := trafficRowsWithLatestCoverage(db, repo, metric, rows)
+	if err != nil {
+		return nil, err
+	}
+	return denseTrafficChart(confirmed, from, to), nil
+}
+
+// trafficRowsWithLatestCoverage removes a cached row only when the latest
+// authoritative response covers that date but did not report it. Rows outside
+// the latest observed span remain historical data; an empty response has no
+// observed span to invalidate.
+func trafficRowsWithLatestCoverage(db *store.Store, repo, metric string, rows []store.DayRow) ([]store.DayRow, error) {
 	st, err := db.TrafficMetricState(repo, metric)
 	if err != nil || st.LastSuccessAt == "" || st.CoverageFrom == "" || st.CoverageTo == "" {
-		return denseTrafficChart(rows, from, to), err
+		return rows, err
 	}
 	coverage, err := db.TrafficCoverageDates(repo, metric, st.LastSuccessAt)
 	if err != nil {
@@ -139,5 +136,5 @@ func denseTrafficChartWithCoverage(db *store.Store, repo, metric, from, to strin
 		}
 		filtered = append(filtered, row)
 	}
-	return denseTrafficChart(filtered, from, to), nil
+	return filtered, nil
 }

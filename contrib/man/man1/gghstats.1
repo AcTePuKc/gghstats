@@ -68,6 +68,15 @@ Steward dashboard pins: \fBrepo add\fR / \fBrepo rm\fR / \fBrepo ls\fR
 (v1.1.0+). Pins join \fBGGHSTATS_FILTER\fR as the traffic sync and \fB/\fR
 table set (union). No GitHub token required; add/rm/ls are local SQLite ops.
 .TP
+.B repo report
+Manage repository report visibility: \fBrepo report ls\fR lists stored
+GitHub visibility and report policy; \fBrepo report set OWNER/REPO
+inherit|include|exclude\fR changes reporting only. Collection and SQLite
+history continue unchanged. Excluded repositories are absent from reporting
+surfaces; inherit shows public repositories and, with
+\fBGGHSTATS_REPORT_PRIVATE=true\fR, private repositories. Unknown visibility
+remains hidden unless explicitly included.
+.TP
 .B featured
 Curate the Featured showcase: \fBfeatured add\fR / \fBfeatured rm\fR /
 \fBfeatured ls\fR (v1.1.0+). Featured repos are editorial and do \fBnot\fR
@@ -151,6 +160,11 @@ Listen port (default: \fB8080\fR).
 .TP
 .B GGHSTATS_FILTER
 Repository filter (default: \fB*\fR = all accessible).
+.TP
+.B GGHSTATS_REPORT_PRIVATE
+When \fBtrue\fR, inherited private repositories are included in reporting.
+Default \fBfalse\fR. Explicit \fBinclude\fR and \fBexclude\fR report policies
+override inheritance; unknown GitHub visibility remains hidden by default.
 .TP
 .B GGHSTATS_SYNC_INTERVAL
 Sync frequency (default: \fB1h\fR).

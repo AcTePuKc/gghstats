@@ -93,7 +93,8 @@ func fetchStoreViews(gh *github.Client, db *store.Store, repo string) error {
 		rows = append(rows, store.DayRow{Date: v.Timestamp.UTC().Format("2006-01-02"), Count: v.Count, Uniques: v.Uniques})
 	}
 	now := time.Now().UTC()
-	if err := db.RecordTrafficMetricSuccess(repo, "views", rows, now, now.AddDate(0, 0, -13).Format("2006-01-02"), now.Format("2006-01-02")); err != nil {
+	coverageFrom, coverageTo := store.TrafficCoverageBounds(rows)
+	if err := db.RecordTrafficMetricSuccess(repo, "views", rows, now, coverageFrom, coverageTo); err != nil {
 		return fmt.Errorf("store views: %w", err)
 	}
 	fmt.Printf("views:     %d days stored (total: %d, uniques: %d)\n",
@@ -112,7 +113,8 @@ func fetchStoreClones(gh *github.Client, db *store.Store, repo string) error {
 		rows = append(rows, store.DayRow{Date: c.Timestamp.UTC().Format("2006-01-02"), Count: c.Count, Uniques: c.Uniques})
 	}
 	now := time.Now().UTC()
-	if err := db.RecordTrafficMetricSuccess(repo, "clones", rows, now, now.AddDate(0, 0, -13).Format("2006-01-02"), now.Format("2006-01-02")); err != nil {
+	coverageFrom, coverageTo := store.TrafficCoverageBounds(rows)
+	if err := db.RecordTrafficMetricSuccess(repo, "clones", rows, now, coverageFrom, coverageTo); err != nil {
 		return fmt.Errorf("store clones: %w", err)
 	}
 	fmt.Printf("clones:    %d days stored (total: %d, uniques: %d)\n",

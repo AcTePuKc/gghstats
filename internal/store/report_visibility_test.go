@@ -11,21 +11,9 @@ func TestReportVisibilityPolicyAndPersistence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.UpsertRepoWithVisibility("public/repo", "", 1, 0, 0, 0, 0, false, false, "", VisibilityPublic); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.UpsertRepoWithVisibility("private/repo", "", 1, 0, 0, 0, 0, false, false, "", VisibilityPrivate); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.UpsertRepoWithVisibility("unknown/repo", "", 1, 0, 0, 0, 0, false, false, "", VisibilityUnknown); err != nil {
-		t.Fatal(err)
-	}
-	if ok, err := s.SetRepoReportPolicy("private/repo", ReportInclude); err != nil || !ok {
-		t.Fatalf("set include = %v, %v", ok, err)
-	}
-	if ok, err := s.SetRepoReportPolicy("public/repo", ReportExclude); err != nil || !ok {
-		t.Fatalf("set exclude = %v, %v", ok, err)
-	}
+	seedReportPolicyRepos(t, s)
+	setReportPolicy(t, s, "private/repo", ReportInclude)
+	setReportPolicy(t, s, "public/repo", ReportExclude)
 	if got, err := s.ListReportRepos(ReportVisibility{}, "name", "asc"); err != nil || len(got) != 1 || got[0].Name != "private/repo" {
 		t.Fatalf("report repos = %#v, %v", got, err)
 	}
@@ -85,5 +73,79 @@ func TestReincludingRepositoryRestoresStoredReportData(t *testing.T) {
 	repo, err := s.ReportRepoByName(ReportVisibility{}, "o/r")
 	if err != nil || repo == nil || repo.TotalViews != 7 {
 		t.Fatalf("re-included repo=%+v err=%v", repo, err)
+	}
+}
+
+func seedReportPolicyRepos(t *testing.T, s *Store) {
+	t.Helper()
+	for _, repo := range []struct{ name, visibility string }{
+		{"public/repo", VisibilityPublic},
+		{"private/repo", VisibilityPrivate},
+		{"unknown/repo", VisibilityUnknown},
+	} {
+		if err := s.UpsertRepoWithVisibility(repo.name, "", 1, 0, 0, 0, 0, false, false, "", repo.visibility); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func setReportPolicy(t *testing.T, s *Store, name, policy string) {
+	t.Helper()
+	if ok, err := s.SetRepoReportPolicy(name, policy); err != nil || !ok {
+		t.Fatalf("set %s=%s: ok=%v err=%v", name, policy, ok, err)
+	}
+}
+
+func reportTotalsFixture(t *testing.T) *Store {
+	t.Helper()
+	s := tempDB(t)
+	for _, repo := range []struct {
+		name   string
+		views  int
+		clones int
+	}{
+		{"public/visible", 7, 3},
+		{"public/excluded", 11, 5},
+	} {
+		if err := s.UpsertRepoWithVisibility(repo.name, "", 0, 0, 0, 0, 0, false, false, "", VisibilityPublic); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.UpsertView(repo.name, "2026-08-26", repo.views, 1); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.UpsertClone(repo.name, "2026-08-26", repo.clones, 1); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.AddFeatured(repo.name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setReportPolicy(t, s, "public/excluded", ReportExclude)
+	return s
+}
+
+func TestReportScopedTotals(t *testing.T) {
+	s := reportTotalsFixture(t)
+	scope := ReportVisibility{}
+	if got, err := s.ReportRepoCount(scope); err != nil || got != 1 {
+		t.Fatalf("report repo count=%d err=%v", got, err)
+	}
+	if got, err := s.SumReportViewsAll(scope); err != nil || got != 7 {
+		t.Fatalf("report views=%d err=%v", got, err)
+	}
+	if got, err := s.SumReportClonesAll(scope); err != nil || got != 3 {
+		t.Fatalf("report clones=%d err=%v", got, err)
+	}
+}
+
+func TestReportScopedFeatured(t *testing.T) {
+	s := reportTotalsFixture(t)
+	scope := ReportVisibility{}
+	entries, total, err := s.FilterReportFeatured(scope, "", "sort", "asc", 1, 25)
+	if err != nil || total != 1 || len(entries) != 1 || entries[0].Name != "public/visible" {
+		t.Fatalf("report featured=%+v total=%d err=%v", entries, total, err)
+	}
+	if got, err := s.ReportFeaturedCount(scope); err != nil || got != 1 {
+		t.Fatalf("report featured count=%d err=%v", got, err)
 	}
 }

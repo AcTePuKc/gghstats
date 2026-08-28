@@ -110,6 +110,16 @@ func handleAPIRepoTraffic(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
 		}
+		clones, err = trafficRowsWithLatestCoverage(db, fullName, "clones", clones)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database error")
+			return
+		}
+		views, err = trafficRowsWithLatestCoverage(db, fullName, "views", views)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "database error")
+			return
+		}
 
 		viewsFreshness, clonesFreshness, err := repoTrafficFreshness(db, fullName, time.Now().UTC())
 		if err != nil {

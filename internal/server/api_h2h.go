@@ -30,17 +30,12 @@ func handleAPIH2H(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusBadRequest, "same repo")
 			return
 		}
-		visibleA, err := db.ReportRepoByName(cfg.ReportVisibility, repoA)
+		visible, err := reportH2HRepos(db, cfg.ReportVisibility, repoA, repoB)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
 		}
-		visibleB, err := db.ReportRepoByName(cfg.ReportVisibility, repoB)
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "database error")
-			return
-		}
-		if visibleA == nil || visibleB == nil {
+		if !visible {
 			writeJSONNotFound(w)
 			return
 		}
@@ -76,6 +71,20 @@ func handleAPIH2H(cfg Config) http.HandlerFunc {
 		}
 		writeAPIJSON(w, r, cfg, resp)
 	}
+}
+
+// reportH2HRepos applies the report boundary before any H2H lookup or response
+// can disclose either requested repository.
+func reportH2HRepos(db *store.Store, scope store.ReportVisibility, repoA, repoB string) (bool, error) {
+	visibleA, err := db.ReportRepoByName(scope, repoA)
+	if err != nil {
+		return false, err
+	}
+	visibleB, err := db.ReportRepoByName(scope, repoB)
+	if err != nil {
+		return false, err
+	}
+	return visibleA != nil && visibleB != nil, nil
 }
 
 func decodeH2HChartJSON(db *store.Store, repoA, repoB string, interval h2h.Interval) (interface{}, bool) {
