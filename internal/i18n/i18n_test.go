@@ -126,8 +126,9 @@ func TestNormalizeLocale(t *testing.T) {
 }
 
 func TestParseEnabledAndDefaultLocales(t *testing.T) {
-	if got := ParseEnabledLocales(""); len(got) != 3 {
-		t.Fatalf("empty enabled: %v", got)
+	gotDefault := ParseEnabledLocales("")
+	if len(gotDefault) != 5 || gotDefault[3] != "fr" || gotDefault[4] != "pt-br" {
+		t.Fatalf("empty enabled: %v", gotDefault)
 	}
 	got := ParseEnabledLocales(" fr , pt-br ")
 	if len(got) != 2 || got[0] != "fr" || got[1] != "pt-br" {
