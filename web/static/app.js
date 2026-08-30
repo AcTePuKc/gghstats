@@ -60,9 +60,11 @@ function chartThemeColors() {
   };
 }
 
-function chartTooltipOptions() {
+function chartTooltipOptions(opts = {}) {
   const dark = currentTheme() === 'dark';
-  return {
+  const formatValues = opts.formatValues !== false;
+  const asPercent = opts.asPercent === true;
+  const base = {
     intersect: false,
     backgroundColor: dark ? '#16161a' : '#ffffff',
     titleColor: dark ? '#fafaf6' : '#121212',
@@ -71,6 +73,25 @@ function chartTooltipOptions() {
     borderWidth: 2,
     padding: 10,
     displayColors: true
+  };
+  if (!formatValues) {
+    return base;
+  }
+  return {
+    ...base,
+    callbacks: {
+      label(ctx) {
+        const label = ctx.dataset?.label ? `${ctx.dataset.label}: ` : '';
+        const raw = ctx.parsed?.y;
+        if (raw === null || raw === undefined || !Number.isFinite(Number(raw))) {
+          return `${label}—`;
+        }
+        if (asPercent) {
+          return `${label}${formatMomentumTick(raw)}`;
+        }
+        return `${label}${formatChartTick(raw)}`;
+      }
+    }
   };
 }
 
@@ -237,13 +258,85 @@ function seriesMaxAbs(values) {
   return max;
 }
 
+function numberFormatConfig() {
+  const cfg = window.gghstatsNumberFormat || {};
+  return {
+    locale: String(cfg.locale || 'en'),
+    compact: cfg.compact === true
+  };
+}
+
+function localeGroupSep(locale) {
+  switch (locale) {
+    case 'es':
+    case 'de':
+    case 'pt-br':
+      return '.';
+    case 'fr':
+      return ' ';
+    default:
+      return ',';
+  }
+}
+
+function localeDecSep(locale) {
+  switch (locale) {
+    case 'es':
+    case 'de':
+    case 'fr':
+    case 'pt-br':
+      return ',';
+    default:
+      return '.';
+  }
+}
+
+function groupedCountJS(n, locale) {
+  const s = String(Math.trunc(Math.abs(n)));
+  const sep = localeGroupSep(locale);
+  let out = '';
+  let start = s.length % 3;
+  if (start === 0) start = 3;
+  out = s.slice(0, start);
+  for (let i = start; i < s.length; i += 3) {
+    out += sep + s.slice(i, i + 3);
+  }
+  return out;
+}
+
+function compactCountJS(n, locale) {
+  const abs = Math.abs(n);
+  if (abs < 1000) return String(Math.round(n));
+  const dec = localeDecSep(locale);
+  const units = [
+    [1_000_000_000_000_000, 'P'],
+    [1_000_000_000_000, 'T'],
+    [1_000_000_000, 'G'],
+    [1_000_000, 'M'],
+    [1_000, 'k']
+  ];
+  for (const [div, suf] of units) {
+    if (abs >= div) {
+      let s = (n / div).toFixed(1);
+      if (dec !== '.') s = s.replace('.', dec);
+      return s + suf;
+    }
+  }
+  return String(Math.round(n));
+}
+
+/** Mirrors i18n.FormatCount for Chart.js ticks/tooltips. */
 function formatChartTick(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-  if (abs >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-  return String(Math.round(n));
+  const { locale, compact } = numberFormatConfig();
+  // Match i18n.FormatCount: clamp negatives to 0, then group or compact.
+  let count = Math.round(n);
+  if (count < 0) count = 0;
+  if (compact) {
+    return compactCountJS(count, locale);
+  }
+  return groupedCountJS(count, locale);
 }
 
 function formatMomentumTick(value) {
@@ -372,7 +465,7 @@ function renderH2HLineChart(canvasId, labels, seriesA, seriesB, labelA, labelB, 
           display: true,
           labels: { color: c.fg, font: { family: "'JetBrains Mono', monospace", size: 11 } }
         },
-        tooltip: chartTooltipOptions()
+        tooltip: chartTooltipOptions({ asPercent })
       }
     },
     plugins: [mouseLinePlugin]
@@ -479,7 +572,8 @@ function renderIndexClonesOverTime(canvasId, data) {
           beginAtZero: true,
           ticks: {
             color: c.fg,
-            font: { size: 11, family: "'JetBrains Mono', monospace" }
+            font: { size: 11, family: "'JetBrains Mono', monospace" },
+            callback: formatChartTick
           },
           grid: { color: c.grid },
           border: { display: true, color: c.border, width: 1 }
@@ -867,7 +961,8 @@ function renderMetrics(canvasId, data, uniqueCol, countCol, chartLabel) {
           beginAtZero: true,
           ticks: {
             color: c.fg,
-            font: { size: 11, family: "'JetBrains Mono', monospace" }
+            font: { size: 11, family: "'JetBrains Mono', monospace" },
+            callback: formatChartTick
           },
           grid: { color: c.grid },
           border: { display: true, color: c.border, width: 1 }
@@ -919,7 +1014,8 @@ function renderStars(canvasId, data, chartLabel) {
           beginAtZero: true,
           ticks: {
             color: c.fg,
-            font: { size: 11, family: "'JetBrains Mono', monospace" }
+            font: { size: 11, family: "'JetBrains Mono', monospace" },
+            callback: formatChartTick
           },
           grid: { color: c.grid },
           border: { display: true, color: c.border, width: 1 }

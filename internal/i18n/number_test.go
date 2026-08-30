@@ -60,3 +60,26 @@ func TestFormatCountNegative(t *testing.T) {
 		t.Errorf("negative compact = %q, want 0", got)
 	}
 }
+
+func TestFormatFloat(t *testing.T) {
+	cases := []struct {
+		f        float64
+		locale   string
+		decimals int
+		want     string
+	}{
+		{7, "en", 2, "7.00"},
+		{33146.93, "en", 2, "33,146.93"},
+		{33146.93, "es", 2, "33.146,93"},
+		{33146.93, "de", 2, "33.146,93"},
+		{33146.93, "fr", 2, "33 146,93"},
+		{33146.93, "pt-br", 2, "33.146,93"},
+		{1478.56, "en", 2, "1,478.56"},
+		{-1, "en", 2, "0.00"},
+	}
+	for _, c := range cases {
+		if got := FormatFloat(c.f, c.locale, c.decimals); got != c.want {
+			t.Errorf("FormatFloat(%v, %q, %d) = %q, want %q", c.f, c.locale, c.decimals, got, c.want)
+		}
+	}
+}

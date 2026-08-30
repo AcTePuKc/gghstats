@@ -10,11 +10,13 @@ Detailed band plans (scope, exit criteria, checklist):
 
 | Band | Plan |
 |------|------|
-| **0.9.x** | [docs/plan-v0.9.x.md](docs/plan-v0.9.x.md) |
-| **0.10.x** | [docs/plan-v0.10.x.md](docs/plan-v0.10.x.md) |
-| **0.11.x** | [docs/plan-v0.11.x.md](docs/plan-v0.11.x.md) |
-| **1.0.0** | [docs/plan-v1.0.0.md](docs/plan-v1.0.0.md) |
-| **1.1.0** | [docs/plan-v1.1.0.md](docs/plan-v1.1.0.md) |
+| **0.9.x** | [docs/plan-v0.9.x.md](docs/plan-v0.9.x.md) (closed) |
+| **0.10.x** | [docs/plan-v0.10.x.md](docs/plan-v0.10.x.md) (closed) |
+| **0.11.x** | [docs/plan-v0.11.x.md](docs/plan-v0.11.x.md) (closed) |
+| **1.0.0** | [docs/plan-v1.0.0.md](docs/plan-v1.0.0.md) (closed) |
+| **1.1.0** | [docs/plan-v1.1.0.md](docs/plan-v1.1.0.md) (closed) |
+| **1.2.0 / 1.3.0** | No separate band plan file — scope in [CHANGELOG.md](CHANGELOG.md) |
+| **1.4.0** | [docs/plan-v1.4.0.md](docs/plan-v1.4.0.md) (closed) |
 
 ## Principles
 
@@ -52,6 +54,9 @@ Detailed band plans (scope, exit criteria, checklist):
 1.0.x  → patches on 1.0.1 (1.0.2, 1.0.3, …)
 1.1.0  → pins CLI ∪ FILTER + Featured page      → docs/plan-v1.1.0.md
 1.1.x  → SemVer patches after 1.1.0 is tagged (1.1.1, …)
+1.2.0  → Featured pagination/search/sort + compact numbers (CHANGELOG)
+1.3.0  → index unique cloners + rank/share + JSONL export (CHANGELOG)
+1.4.0  → uniques UX + Featured JSON + sitemap /featured → docs/plan-v1.4.0.md
 2.0.0  → Line B (webhooks / serious ROADMAP) — not Featured
 ```
 
@@ -67,7 +72,7 @@ Detailed band plans (scope, exit criteria, checklist):
 
 ## Versioning (SemVer)
 
-Current release **1.3.0**. Patch = third digit of the **current** minor.
+Current release **1.4.0**. Patch = third digit of the **current** minor.
 
 | Form | Examples | Meaning |
 |------|----------|---------|
@@ -77,9 +82,13 @@ Current release **1.3.0**. Patch = third digit of the **current** minor.
 
 Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). Do not use `1.1.x` for fixes while HEAD is still 1.0.1.
 
-## Next (after 1.0)
+## Next (after 1.4.0)
 
-**1.0.x** patches as needed. Active feature band: [plan-v1.1.0.md](docs/plan-v1.1.0.md) (Line E). Shipped: **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, `# - %` rank/share column, JSONL export). Remaining from the unique-cloners plan: repo-page unique cloners + Featured JSON — next minor. Line B waits for **2.0.0**.
+Band plans through **1.4.0** are **closed**. Current release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
+
+**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, rank/share column, JSONL export), **1.4.0** (uniques UX, Featured JSON, sitemap `/featured`, Carlok #22–#25).
+
+**Next (1.5.0 proposed):** traffic freshness + report visibility ([PR #31](https://github.com/hrodrig/gghstats/pull/31)) — band plan lands after this release. Line B waits for **2.0.0**.
 
 ## Explicit non-goals (this repo)
 
@@ -92,4 +101,4 @@ Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). D
 
 ## How to propose work
 
-Open an issue or PR against **`develop`**. Large ideas: describe the problem and fit to principles / band plans before coding. Line E is **1.1.0**; further new lines need a band plan.
+Open an issue or PR against **`develop`**. Large ideas: describe the problem and fit to principles / band plans before coding. Line E shipped in **1.1.0**; further new lines need a band plan (or CHANGELOG + ROADMAP **Next** for small minors).

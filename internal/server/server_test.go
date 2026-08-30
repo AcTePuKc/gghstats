@@ -263,6 +263,8 @@ func TestIndexPageCloneStatistics(t *testing.T) {
 		">12.25<",
 		">3.00<",
 		">1.00<",
+		`title="Daily average of the metric.`,
+		`tabindex="0"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("expected clone statistics content %q", want)
@@ -286,7 +288,7 @@ func TestIndexPageCloneRankAndShare(t *testing.T) {
 
 	body := indexPageBody(t, New(Config{Store: db}))
 	for _, want := range []string{
-		"# - %",
+		"Rank",
 		"1st · 80.00%",
 		"2nd · 20.00%",
 		`href="/export.jsonl"`,
@@ -317,8 +319,11 @@ func TestIndexJSONLExport(t *testing.T) {
 	if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "application/x-ndjson") {
 		t.Fatalf("Content-Type = %q, want JSONL", got)
 	}
-	if got := w.Header().Get("Content-Disposition"); !strings.Contains(got, "gghstats-export.jsonl") {
-		t.Fatalf("Content-Disposition = %q, want attachment filename", got)
+	if got := w.Header().Get("Content-Disposition"); !strings.Contains(got, "gghstats-export-") || !strings.Contains(got, ".jsonl") {
+		t.Fatalf("Content-Disposition = %q, want attachment filename with UTC timestamp", got)
+	}
+	if !strings.Contains(w.Header().Get("Content-Disposition"), "filename=\"gghstats-export-") {
+		t.Fatalf("Content-Disposition = %q, want gghstats-export-YYYYMMDD-HHMM.jsonl", w.Header().Get("Content-Disposition"))
 	}
 
 	var row indexJSONLExportRow

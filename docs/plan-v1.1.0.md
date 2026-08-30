@@ -1,18 +1,19 @@
 # Plan — v1.1.0
 
-**Status:** Planned — implement on `develop`; tag only after user OK.  
+**Status:** **Closed** — **v1.1.0** shipped (2026-08-22): Line E pins CLI ∪ FILTER + Featured HTML/CLI. Next: [ROADMAP.md](../ROADMAP.md) (1.2.0 / 1.3.0 already tagged; remaining product work listed under **Next**).
+
 **Band goal:** Additive **catalog CLI** (pins) + **Featured** showcase. Operator stewards the box from the console (SSH/VPS: add, rm, sync, backup) — not a browser admin UI. Installed 1.0.x operators who do nothing stay identical.
 
 Parent: [ROADMAP.md](../ROADMAP.md) · Spec: [SPEC.md](../SPEC.md) · Design: [superpowers/specs/2026-08-14-featured-and-repo-cli-design.md](superpowers/specs/2026-08-14-featured-and-repo-cli-design.md) · Tasks: [superpowers/plans/2026-08-14-featured-and-repo-cli.md](superpowers/plans/2026-08-14-featured-and-repo-cli.md)
 
 ## Versioning (SemVer)
 
-Current **1.0.1**. Fixes until this ships: **`1.0.2`, `1.0.3`, `1.0.4`, … (`1.0.x`)**. Not `1.1.x`.
+Shipped as **1.1.0**. Current tree may be a later **1.x** (see root **`VERSION`**).
 
 | Tag | Allowed |
 |-----|---------|
-| **1.0.x** | Patches on 1.0.1 only (no Line E) |
-| **1.1.0** | E1 + E2 (or E1 only if E2 slips — then E2 waits for **1.2.0**, not a patch) |
+| **1.0.x** | Patches on 1.0.1 only (no Line E) — historical |
+| **1.1.0** | E1 + E2 (this band) |
 | **1.1.x** | Patches **after** 1.1.0 is tagged (`1.1.1`, …) |
 | **2.0.0** | Not this. ROADMAP Line B (webhooks / serious expected work) |
 
@@ -63,23 +64,24 @@ Empty catalog = 1.0.1 chrome and discovery. Table **R1–R12**: [design spec Tes
 
 ## Checklist
 
-- [ ] E1 store migration v6 + pin CRUD tests
-- [ ] E1 CLI `repo add|rm|ls`
-- [ ] E1s sync union + tests (`!fork` + pin)
-- [ ] E2 featured CRUD tests + CLI
-- [ ] E2s metadata sync (no traffic) + tests
-- [ ] E2u `/featured` + nav hide-when-empty + i18n
-- [ ] API-only does not mount Featured HTML
-- [ ] Regression **R1–R12** tests exist and pass (empty catalog + no KPI leak)
-- [ ] Existing `TestFilterExcludeFork`, dogfood API-only, i18n keys still green
-- [ ] SPEC + README + man + env.example
-- [ ] CHANGELOG `[Unreleased]` → `[1.1.0]` at VERSION bump
-- [ ] `VERSION` 1.1.0 dedicated commit (user OK)
-- [ ] `make release-check` (user asks)
-- [ ] Merge `develop` → `main`, tag `v1.1.0` (user OK)
+- [x] E1 store migration v6 + pin CRUD tests
+- [x] E1 CLI `repo add|rm|ls`
+- [x] E1s sync union + tests (`!fork` + pin)
+- [x] E2 featured CRUD tests + CLI
+- [x] E2s metadata sync (no traffic) + tests
+- [x] E2u `/featured` + nav hide-when-empty + i18n
+- [x] API-only does not mount Featured HTML
+- [x] Regression **R1–R12** tests exist and pass (empty catalog + no KPI leak)
+- [x] Existing `TestFilterExcludeFork`, dogfood API-only, i18n keys still green
+- [x] SPEC + README + man + env.example
+- [x] CHANGELOG `[Unreleased]` → `[1.1.0]` at VERSION bump
+- [x] `VERSION` 1.1.0 dedicated commit (user OK)
+- [x] `make release-check` (user asks)
+- [x] Merge `develop` → `main`, tag `v1.1.0` (user OK)
 
 ## After 1.1.0
 
 - **1.1.x:** SemVer patches of 1.1.0 (`1.1.1`, …). No new features.
-- **1.2.0 candidates:** Featured JSON dogfood; optional sitemap `/featured`; **unique cloners visible (index + repo)** — data already in `clone_uniques` (`SUM` of GitHub daily uniques, not lifetime machines). Index: column + KPI. Repo: uniques as primary number, clone events secondary. Label so 1466 is not hidden behind “1466 / 4304”.
+- **Shipped later:** **1.2.0** — Featured pagination/search/sort + compact numbers; **1.3.0** — index unique-cloners visibility, `# - %` rank/share, JSONL export (see CHANGELOG).
+- **Moved to 1.4.0:** repo-page unique cloners; Featured JSON dogfood; sitemap `/featured` — see [plan-v1.4.0.md](plan-v1.4.0.md). UI polish: GitHub issues #22–#25 (Carlok).
 - **2.0.0:** Line B (webhooks / rate-limit relief), not more vitrine scope.

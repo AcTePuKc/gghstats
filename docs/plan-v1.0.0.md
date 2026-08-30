@@ -1,5 +1,7 @@
 # Plan — v1.0.0
 
+**Status:** **Closed** — **v1.0.0** shipped (2026-07-26); **v1.0.1** dependency patch (2026-07-31). Next: [plan-v1.1.0.md](plan-v1.1.0.md) (also closed).
+
 **Band goal:** **safe to depend** — stable defaults, frozen documented API, packaging parity. Not a feature dump.
 
 Parent: [ROADMAP.md](../ROADMAP.md) · Spec: [SPEC.md](../SPEC.md)
@@ -21,8 +23,8 @@ Parent: [ROADMAP.md](../ROADMAP.md) · Spec: [SPEC.md](../SPEC.md)
 | PKG | **Packaging parity** | `.deb` / `.rpm` / Homebrew / GHCR tags; BSD ports + docs match `VERSION`. |
 | REL | **Release bar** | `make release-check` green (lint, test, security, docker-scan). Release only from `main` per git-flow. |
 | DOC | **Man / env / ports sync** | `contrib/man`, `gghstats.env.example`, FreeBSD/OpenBSD sync when `VERSION` bumps (`AGENTS.md`). |
-| OBS | **Access log client IP** | Include effective `ip` in HTTP access logs (`clientIP` + `GGHSTATS_TRUSTED_PROXIES`). Code ready on `develop` (Unreleased); **do not** cut a patch release only for this — ship with **1.0.0**. |
-| ALERT | **Fix alert `dash` URL** | Remove erroneous `/repo/` prefix; match HTML `/{owner}/{repo}`. Code on `develop`; ship with **1.0.0**. |
+| OBS | **Access log client IP** | Include effective `ip` in HTTP access logs (`clientIP` + `GGHSTATS_TRUSTED_PROXIES`). Shipped with **1.0.0**. |
+| ALERT | **Fix alert `dash` URL** | Remove erroneous `/repo/` prefix; match HTML `/{owner}/{repo}`. Shipped with **1.0.0**. |
 
 ## Out of scope (this release)
 
@@ -45,15 +47,15 @@ Parent: [ROADMAP.md](../ROADMAP.md) · Spec: [SPEC.md](../SPEC.md)
 - [x] Default path implementation + tests + upgrade notes
 - [x] SPEC “1.0 stability” section or banner
 - [x] Man page + env example + port sync
-- [ ] `make release-check`
-- [ ] Merge `develop` → `main`, tag, GitHub release
+- [x] `make release-check`
+- [x] Merge `develop` → `main`, tag, GitHub release
 - [x] OBS access-log client IP (in CHANGELOG 1.0.0)
 - [x] ALERT dash URL fix (in CHANGELOG 1.0.0)
 
 ## After 1.0
 
-- **1.0.x:** SemVer patches on 1.0.1 (`1.0.2`, `1.0.3`, …).
-- **1.1.0:** Line E — repo pins CLI + Featured showcase ([plan-v1.1.0.md](plan-v1.1.0.md)). Not Line B.
-- **1.1.x:** patches only **after** 1.1.0 is tagged.
+- **1.0.x:** SemVer patches on 1.0.1 (`1.0.2`, `1.0.3`, …) — historical; Line E did not ship as a 1.0.x patch.
+- **1.1.0:** Line E — repo pins CLI + Featured showcase ([plan-v1.1.0.md](plan-v1.1.0.md)) — **shipped**.
+- **Later 1.x:** see [ROADMAP.md](../ROADMAP.md) (**1.2.0**, **1.3.0**, **Next**).
 - **2.0.0:** Line B (webhooks) if still skipped; Line C rollups later.
 - Non-goals remain unless a new major version rethinks them.

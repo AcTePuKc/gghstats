@@ -179,6 +179,7 @@ func mountAPIRoutes(mux *http.ServeMux, cfg Config) {
 	mux.HandleFunc("GET /api/v1/repos/{owner}/{repo}/popular", apiMiddleware(cfg.APIToken, handleAPIRepoPopular(cfg)))
 	mux.HandleFunc("GET /api/v1/h2h", apiMiddleware(cfg.APIToken, handleAPIH2H(cfg)))
 	mux.HandleFunc("GET /api/v1/charts/index-clones", apiMiddleware(cfg.APIToken, handleAPIIndexClonesChart(cfg)))
+	mux.HandleFunc("GET /api/v1/featured", apiMiddleware(cfg.APIToken, handleAPIFeatured(cfg)))
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		mux.HandleFunc("GET /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStatus(cfg)))
 		mux.HandleFunc("POST /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStart(cfg)))
@@ -317,7 +318,7 @@ func handleAPIRepos(cfg Config) http.HandlerFunc {
 			return
 		}
 
-		totalStars, totalForks, totalClones, totalViews := sumIndexKPIs(repos)
+		totalStars, totalForks, totalClones, _, totalViews, _ := sumIndexKPIs(repos)
 		items := repos
 		resp := map[string]interface{}{
 			"total_count":  len(repos),
@@ -392,6 +393,8 @@ type layoutData struct {
 	Query            string // current index search query, used by the matching JSONL export
 	LocaleLinks      []localeLink
 	JSI18n           template.JS
+	// JSNumberFormat exposes locale + compact flag for Chart.js tick/tooltip formatting.
+	JSNumberFormat template.JS
 	// CustomStylesheetURL is set when GGHSTATS_CUSTOM_CSS points to a valid file (safe for href).
 	CustomStylesheetURL template.URL
 	// SyncUIEnabled shows the sidebar “Sync now” control (requires API token + coordinator).
@@ -470,7 +473,7 @@ func fillLayoutDefaults(d layoutData) layoutData {
 
 // buildIndexListClonesChartPayload returns JSON (for Chart.js) of daily clone totals across repoNames,
 // scoped to the last indexCloneChartMaxDays ending at the newest clone date in the DB.
-func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggCount int, js template.JS, stats, uniqueStats *cloneStatistics, err error) {
+func buildIndexListClonesChartPayload(db *store.Store, repoNames []string, locale string, compact bool) (aggCount int, js template.JS, stats, uniqueStats *cloneStatistics, err error) {
 	js = template.JS("[]")
 	if len(repoNames) == 0 {
 		return 0, js, nil, nil, nil
@@ -502,7 +505,10 @@ func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggC
 	if err != nil {
 		return 0, js, nil, nil, err
 	}
-	return len(rows), template.JS(b), calculateCloneStatistics(rows), calculateUniqueCloneStatistics(rows), nil
+	return len(rows), template.JS(b),
+		calculateCloneStatistics(rows, locale, compact),
+		calculateUniqueCloneStatistics(rows, locale, compact),
+		nil
 }
 
 func parseIndexQueryParams(r *http.Request) (sort, dir, query string, page, perPage int) {
@@ -549,14 +555,16 @@ func repoNamesFromSummaries(repos []store.RepoSummary) []string {
 	return names
 }
 
-func sumIndexKPIs(repos []store.RepoSummary) (stars, forks, clones, views int) {
+func sumIndexKPIs(repos []store.RepoSummary) (stars, forks, clones, cloneUniques, views, viewUniques int) {
 	for _, rp := range repos {
 		stars += rp.Stars
 		forks += rp.Forks
 		clones += rp.TotalClones
+		cloneUniques += rp.CloneUniques
 		views += rp.TotalViews
+		viewUniques += rp.TotalUniques
 	}
-	return stars, forks, clones, views
+	return stars, forks, clones, cloneUniques, views, viewUniques
 }
 
 func indexReposPageSlice(repos []store.RepoSummary, page, perPage int) (start, end int, pageSlice []store.RepoSummary) {
@@ -601,7 +609,9 @@ type indexTemplatePayload struct {
 	KPIStars             int
 	KPIForks             int
 	KPIClones            int
+	KPICloneUniques      int
 	KPIViews             int
+	KPIViewUniques       int
 	PrevURL              string
 	NextURL              string
 	SortNameURL          string
@@ -622,7 +632,7 @@ func buildIndexTemplatePayload(
 	reposPage []indexRepoRow,
 	sort, dir, query string,
 	page, perPage, total, start, end, totalPages int,
-	kpiStars, kpiForks, kpiClones, kpiViews int,
+	kpiStars, kpiForks, kpiClones, kpiCloneUniques, kpiViews, kpiViewUniques int,
 	listClonesAggJSON template.JS,
 	listClonesAggCount int,
 	listCloneStats *cloneStatistics,
@@ -641,7 +651,9 @@ func buildIndexTemplatePayload(
 		KPIStars:             kpiStars,
 		KPIForks:             kpiForks,
 		KPIClones:            kpiClones,
+		KPICloneUniques:      kpiCloneUniques,
 		KPIViews:             kpiViews,
+		KPIViewUniques:       kpiViewUniques,
 		PrevURL:              buildIndexURL(sort, dir, query, page-1, perPage),
 		NextURL:              buildIndexURL(sort, dir, query, page+1, perPage),
 		SortNameURL:          buildSortURL("name", sort, dir, query, perPage),
@@ -683,12 +695,14 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(db, repoNamesFromSummaries(repos))
+		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(
+			db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), cfg.CompactNumbers,
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		kpiStars, kpiForks, kpiClones, kpiViews := sumIndexKPIs(repos)
+		kpiStars, kpiForks, kpiClones, kpiCloneUniques, kpiViews, kpiViewUniques := sumIndexKPIs(repos)
 		rankedRepos := rankIndexReposByTotalClones(repos)
 		total := len(repos)
 		start, end, reposPage := indexRepoRowsPageSlice(rankedRepos, page, perPage)
@@ -698,7 +712,8 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 		lb := bindPageLocale(r, cfg)
 		data := buildIndexTemplatePayload(
 			reposPage, sort, dir, query, page, perPage, total, start, end, totalPages,
-			kpiStars, kpiForks, kpiClones, kpiViews, listClonesAggJSON, listClonesAggCount, listCloneStats, listUniqueCloneStats,
+			kpiStars, kpiForks, kpiClones, kpiCloneUniques, kpiViews, kpiViewUniques,
+			listClonesAggJSON, listClonesAggCount, listCloneStats, listUniqueCloneStats,
 		)
 		data.localeBinder = lb
 		data.ShowingLine = lb.Tfmt("index.showing", map[string]string{

@@ -42,6 +42,34 @@ func FormatCount(n int, locale string, compact bool) string {
 	return groupedCount(n, locale)
 }
 
+// FormatFloat renders a non-negative float with a fixed number of decimal places
+// and locale-aware grouping/decimal separators (e.g. en "33,146.93", es "33.146,93").
+// Compact mode is not applied: statistics panels need full precision, not "33.1k".
+func FormatFloat(f float64, locale string, decimals int) string {
+	if f < 0 {
+		f = 0
+	}
+	if decimals < 0 {
+		decimals = 0
+	}
+	locale = NormalizeLocale(locale)
+	raw := strconv.FormatFloat(f, 'f', decimals, 64)
+	intPart, fracPart, hasFrac := strings.Cut(raw, ".")
+	n, err := strconv.Atoi(intPart)
+	if err != nil {
+		return raw
+	}
+	out := groupedCount(n, locale)
+	if !hasFrac || decimals == 0 {
+		return out
+	}
+	dec := localeDecSep[locale]
+	if dec == "" {
+		dec = "."
+	}
+	return out + dec + fracPart
+}
+
 func groupedCount(n int, locale string) string {
 	s := strconv.Itoa(n)
 	sep := localeGroupSep[locale]

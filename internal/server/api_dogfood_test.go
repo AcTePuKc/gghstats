@@ -197,6 +197,7 @@ func TestAPIDogfoodUnauthorized(t *testing.T) {
 		"/api/v1/repos/o/r/popular",
 		"/api/v1/h2h?a=o/r&b=x/y",
 		"/api/v1/charts/index-clones",
+		"/api/v1/featured",
 	}
 	for _, p := range paths {
 		w := apiGET(t, h, p, "")
