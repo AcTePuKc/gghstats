@@ -73,11 +73,8 @@ func runRepoReportLs(args []string, w io.Writer) error {
 	}
 	visibility = strings.TrimSpace(visibility)
 	policy = strings.TrimSpace(policy)
-	if visibility != "" && visibility != store.VisibilityPublic && visibility != store.VisibilityPrivate && visibility != store.VisibilityUnknown {
-		return fmt.Errorf("repo report ls: invalid --visibility %q (public|private|unknown)", visibility)
-	}
-	if policy != "" && policy != store.ReportInherit && policy != store.ReportInclude && policy != store.ReportExclude {
-		return fmt.Errorf("repo report ls: invalid --policy %q (inherit|include|exclude)", policy)
+	if err := validateRepoReportLsFilters(visibility, policy); err != nil {
+		return err
 	}
 
 	db, err := store.Open(dbPath)
@@ -89,16 +86,7 @@ func runRepoReportLs(args []string, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	filtered := make([]store.RepoReportState, 0, len(states))
-	for _, state := range states {
-		if visibility != "" && state.GitHubVisibility != visibility {
-			continue
-		}
-		if policy != "" && state.ReportPolicy != policy {
-			continue
-		}
-		filtered = append(filtered, state)
-	}
+	filtered := filterRepoReportStates(states, visibility, policy)
 	if asJSON {
 		enc := json.NewEncoder(w)
 		enc.SetEscapeHTML(false)
@@ -108,6 +96,30 @@ func runRepoReportLs(args []string, w io.Writer) error {
 		fmt.Fprintf(w, "%s\t%s\t%s\n", state.Name, state.GitHubVisibility, state.ReportPolicy)
 	}
 	return nil
+}
+
+func validateRepoReportLsFilters(visibility, policy string) error {
+	if visibility != "" && visibility != store.VisibilityPublic && visibility != store.VisibilityPrivate && visibility != store.VisibilityUnknown {
+		return fmt.Errorf("repo report ls: invalid --visibility %q (public|private|unknown)", visibility)
+	}
+	if policy != "" && policy != store.ReportInherit && policy != store.ReportInclude && policy != store.ReportExclude {
+		return fmt.Errorf("repo report ls: invalid --policy %q (inherit|include|exclude)", policy)
+	}
+	return nil
+}
+
+func filterRepoReportStates(states []store.RepoReportState, visibility, policy string) []store.RepoReportState {
+	out := make([]store.RepoReportState, 0, len(states))
+	for _, state := range states {
+		if visibility != "" && state.GitHubVisibility != visibility {
+			continue
+		}
+		if policy != "" && state.ReportPolicy != policy {
+			continue
+		}
+		out = append(out, state)
+	}
+	return out
 }
 
 func runRepoReportSet(args []string, w io.Writer) error {

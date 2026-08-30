@@ -115,9 +115,6 @@ func TestRepoReportCLI(t *testing.T) {
 	if err := s.UpsertRepoWithVisibility("owner/repo", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.UpsertRepoWithVisibility("owner/hidden", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityUnknown); err != nil {
-		t.Fatal(err)
-	}
 	if err := s.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -137,6 +134,29 @@ func TestRepoReportCLI(t *testing.T) {
 	if err := runRepoReport([]string{"ls", "--db", path}); err != nil {
 		t.Fatalf("ls: %v", err)
 	}
+	if err := runRepoReport([]string{"set", "--db", path, "owner/repo", "invalid"}); err == nil {
+		t.Fatal("expected invalid policy error")
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "missing/repo", store.ReportInclude}); err == nil {
+		t.Fatal("expected missing repository error")
+	}
+}
+
+func TestRepoReportLsJSONAndFilters(t *testing.T) {
+	s, path := openCatalogTestDB(t)
+	if err := s.UpsertRepoWithVisibility("owner/repo", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UpsertRepoWithVisibility("owner/hidden", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityUnknown); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.SetRepoReportPolicy("owner/repo", store.ReportExclude); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+
 	var jsonOut strings.Builder
 	if err := runRepoReportLs([]string{"--db", path, "--json", "--policy", store.ReportExclude}, &jsonOut); err != nil {
 		t.Fatalf("ls --json: %v", err)
@@ -148,6 +168,7 @@ func TestRepoReportCLI(t *testing.T) {
 	if len(rows) != 1 || rows[0].Name != "owner/repo" || rows[0].ReportPolicy != store.ReportExclude {
 		t.Fatalf("json filter=%+v", rows)
 	}
+
 	var unknownOut strings.Builder
 	if err := runRepoReportLs([]string{"--db", path, "--visibility", store.VisibilityUnknown}, &unknownOut); err != nil {
 		t.Fatalf("ls --visibility: %v", err)
@@ -157,11 +178,5 @@ func TestRepoReportCLI(t *testing.T) {
 	}
 	if err := runRepoReportLs([]string{"--db", path, "--visibility", "nope"}, io.Discard); err == nil {
 		t.Fatal("expected invalid visibility")
-	}
-	if err := runRepoReport([]string{"set", "--db", path, "owner/repo", "invalid"}); err == nil {
-		t.Fatal("expected invalid policy error")
-	}
-	if err := runRepoReport([]string{"set", "--db", path, "missing/repo", store.ReportInclude}); err == nil {
-		t.Fatal("expected missing repository error")
 	}
 }
