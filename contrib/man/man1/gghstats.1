@@ -77,7 +77,9 @@ inherit|include|exclude\fR changes reporting only. Collection and SQLite
 history continue unchanged. Excluded repositories are absent from reporting
 surfaces; inherit shows public repositories and, with
 \fBGGHSTATS_REPORT_PRIVATE=true\fR, private repositories. Unknown visibility
-remains hidden unless explicitly included.
+remains hidden unless explicitly included. After upgrading to 1.5.0, existing
+rows start as unknown and stay off report surfaces until the next sync (or an
+explicit include); see README \fBUpgrading to 1.5.0\fR.
 .TP
 .B featured
 Curate the Featured showcase: \fBfeatured add\fR / \fBfeatured rm\fR /
@@ -166,7 +168,8 @@ Repository filter (default: \fB*\fR = all accessible).
 .B GGHSTATS_REPORT_PRIVATE
 When \fBtrue\fR, inherited private repositories are included in reporting.
 Default \fBfalse\fR. Explicit \fBinclude\fR and \fBexclude\fR report policies
-override inheritance; unknown GitHub visibility remains hidden by default.
+override inheritance; unknown GitHub visibility remains hidden by default
+(including immediately after a 1.5.0 upgrade, until sync refreshes metadata).
 .TP
 .B GGHSTATS_SYNC_INTERVAL
 Sync frequency (default: \fB1h\fR).

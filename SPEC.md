@@ -234,8 +234,10 @@ GitHub returns stargazer pages **newest-first**; gghstats always sorts ascending
   suppressing the operator’s configured alerts.
 - Migration v7 creates `traffic_metric_state` and `traffic_metric_coverage`.
   Migration v8 adds persisted visibility/policy to `repos`. Old rows upgrade to
-  `unknown` + `inherit` and therefore remain hidden until metadata refresh or
-  explicit include; migrations do not delete historical data.
+  `unknown` + `inherit` and therefore remain hidden from all report surfaces
+  until the next sync refreshes metadata or an operator uses explicit include;
+  migrations do not delete historical data. Operator upgrade steps:
+  README “Upgrading to 1.5.0”.
 
 ---
 

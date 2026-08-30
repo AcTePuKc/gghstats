@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Important for operators (fail-closed reporting):** after upgrading to **1.5.0**, existing SQLite rows migrate to `github_visibility=unknown` + `report_policy=inherit`. **Repositories stay hidden from the dashboard, APIs, exports, badges, and other report surfaces until the next sync** (startup sync when `GGHSTATS_SYNC_ON_STARTUP=true`, the scheduled interval, UI Sync, or `POST /api/v1/sync`). This is expected — **traffic history is not deleted**. After sync records `public`/`private` (or you run `gghstats repo report set OWNER/REPO include`), report-visible repos reappear. See [README — Upgrading to 1.5.0](README.md#upgrading-to-150) and [Report visibility](README.md#report-visibility).
+
 ### Added
 
 - **Traffic freshness / coverage:** per-metric (`views` / `clones`) persisted fetch state and coverage bounds from the GitHub payload; statuses `fresh` / `delayed` / `missing` / `failed` / `never` on the repo page and traffic API; detail charts use `null` gaps for omitted days (explicit `0` stays confirmed zero); independent views/clones fetch. See `docs/plan-v1.5.0.md` (F-fresh).
