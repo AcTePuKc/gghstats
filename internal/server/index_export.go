@@ -2,9 +2,11 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/hrodrig/gghstats/internal/store"
 )
@@ -81,7 +83,7 @@ func handleIndexJSONLExport(db *store.Store) http.HandlerFunc {
 		}
 
 		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Content-Disposition", `attachment; filename="gghstats-export.jsonl"`)
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, indexJSONLExportFilename(time.Now().UTC())))
 		w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
 		encoder := json.NewEncoder(w)
 		for _, row := range rows {
@@ -91,6 +93,11 @@ func handleIndexJSONLExport(db *store.Store) http.HandlerFunc {
 			}
 		}
 	}
+}
+
+// indexJSONLExportFilename returns gghstats-export-YYYYMMDD-HHMM.jsonl in UTC (#23).
+func indexJSONLExportFilename(t time.Time) string {
+	return "gghstats-export-" + t.UTC().Format("20060102-1504") + ".jsonl"
 }
 
 func nonNilDayRows(rows []store.DayRow) []store.DayRow {

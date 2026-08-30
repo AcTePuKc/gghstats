@@ -71,7 +71,7 @@
     "col_forks": "Forks",
     "col_views": "Únicos / visualizações",
     "col_clones": "Únicos / clones",
-    "col_clone_rank_share": "# - %",
+    "col_clone_rank_share": "Ranking",
     "col_1d": "(1d)",
     "col_7d": "(7d)",
     "col_30d": "(30d)",
@@ -90,7 +90,17 @@
     "stats_stddev": "Desvio padrão",
     "stats_min": "Mínimo",
     "stats_max": "Máximo",
-    "stats_p95": "P95"
+    "stats_p95": "P95",
+    "stats_unit_clones": "clones",
+    "stats_unit_unique": "clonadores únicos",
+    "stats_help_mean": "Média diária da métrica. {{value}} {{unit}}/dia em média no período.",
+    "stats_help_median": "Valor central: 50% dos dias ficam abaixo e 50% acima. Dia típico: metade dos dias teve ≤ {{value}} {{unit}}.",
+    "stats_help_variance": "Dispersão ao quadrado (variância populacional). Útil para comparar; menos legível porque a unidade é {{unit}}². {{value}} {{unit}}² — escala grande; olhe o desvio padrão.",
+    "stats_help_stddev": "Desvio típico em relação à média, na mesma unidade. ± {{value}} {{unit}} em torno da média. Um dia «normal» fica em [{{low}}, {{high}}].",
+    "stats_help_min": "Menor valor observado. {{value}} {{unit}} no dia mais fraco{{date}}.",
+    "stats_help_max": "Maior valor observado. {{value}} {{unit}} no dia de pico{{date}}.",
+    "stats_help_p95_one": "Percentil 95 (nearest-rank): 95% dos dias tiveram valor ≤ este. {{value}} — só ~{{days}} dia (5%) ultrapassou este limiar.",
+    "stats_help_p95_other": "Percentil 95 (nearest-rank): 95% dos dias tiveram valor ≤ este. {{value}} — só ~{{days}} dias (5%) ultrapassaram este limiar."
   },
   "h2h": {
     "title": "Cara a Cara (H2H)",
