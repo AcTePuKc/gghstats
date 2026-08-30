@@ -7,6 +7,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Traffic freshness / coverage:** per-metric (`views` / `clones`) persisted fetch state and coverage bounds from the GitHub payload; statuses `fresh` / `delayed` / `missing` / `failed` / `never` on the repo page and traffic API; detail charts use `null` gaps for omitted days (explicit `0` stays confirmed zero); independent views/clones fetch. See `docs/plan-v1.5.0.md` (F-fresh).
+- **Report visibility:** `repos.github_visibility` + `repos.report_policy` with precedence `exclude > include > inherit`; `GGHSTATS_REPORT_PRIVATE`; CLI `gghstats repo report ls/set`; report surfaces fail closed (indistinguishable 404). Collection (`GGHSTATS_INCLUDE_PRIVATE` / filter / pins) stays separate from reporting. See `docs/plan-v1.5.0.md` (V-vis).
+
 ## [1.4.0] - 2026-08-29
 
 ### Added
