@@ -124,7 +124,6 @@ func TestSitemapIncludesFeaturedWhenNonEmpty(t *testing.T) {
 	if err := db.AddFeatured("acme/showcase"); err != nil {
 		t.Fatal(err)
 	}
-	makeFeaturedReportable(t, db, "acme/showcase")
 	h := New(Config{Store: db, PublicURL: "https://stats.example.com"})
 	req := httptest.NewRequest("GET", "/sitemap.xml", nil)
 	req.Host = "stats.example.com"

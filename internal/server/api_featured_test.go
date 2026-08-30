@@ -16,8 +16,6 @@ func featuredHandler(t *testing.T) http.Handler {
 	if err := db.AddFeatured("a/alpha"); err != nil {
 		t.Fatal(err)
 	}
-	makeFeaturedReportable(t, db, "a/alpha")
-	makeFeaturedReportable(t, db, "z/zebra")
 	if err := db.UpsertFeaturedMeta("a/alpha", "", "up/alpha", "Alpha desc", 50, false); err != nil {
 		t.Fatal(err)
 	}

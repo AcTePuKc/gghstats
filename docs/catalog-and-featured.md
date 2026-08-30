@@ -53,7 +53,7 @@ a new fetch.
 The server applies this boundary before rendering or serializing data. Excluded
 repositories do not contribute to dashboard totals/rankings or aggregate
 charts, reporting APIs, JSONL/CSV exports, badges, Prometheus per-repository
-gauges, sitemap, Featured, H2H, alert/report output, or HTML/embedded JSON.
+gauges, sitemap repository URLs, H2H, alert/report output, or HTML/embedded JSON.
 Direct HTML, API, traffic, stars, popular, and badge lookups behave as ordinary
 not-found responses, so they do not confirm that an excluded repository exists.
 
@@ -64,7 +64,7 @@ not-found responses, so they do not confirm that an excluded repository exists.
 | Catalog | CLI | What it does | Appears on `/`? |
 |---|---|---|---|
 | **Pins** | `gghstats repo` | Extends `GGHSTATS_FILTER` discovery with extra repos | **Yes** — row + traffic sync |
-| **Featured** | `gghstats featured` | Editorial showcase of repos worth highlighting | **No** — only on `/featured`, when report-visible |
+| **Featured** | `gghstats featured` | Editorial showcase of repos worth highlighting | **No** — only on `/featured` (catalog, not report-scoped) |
 
 They are two independent tables (`pins` and `featured`) in the same SQLite
 database. Adding to one never affects the other.
@@ -114,12 +114,11 @@ exceptions that matter:
 ## Featured — `gghstats featured`
 
 A **featured** entry curates a repository into the `/featured` showcase page —
-editorial "here's work worth looking at", independent of traffic aggregation.
-The public page and `/api/v1/featured` still apply report visibility: a
-featured entry that is excluded, private without `GGHSTATS_REPORT_PRIVATE=true`,
-or unknown is not emitted. This avoids using a Featured catalog as a privacy
-bypass; collect/refresh its repository metadata or explicitly include a stored
-repository before expecting it to appear in a report.
+editorial "here's work worth looking at", independent of traffic aggregation
+and report visibility. The public page and `/api/v1/featured` list catalog
+rows even when the name is not in `repos` (no collected traffic) or when a
+collected namesake is excluded from reports. Featured is metadata-only; it is
+not a report surface.
 
 ```bash
 gghstats featured add hrodrig/awesome-readme    # showcase (idempotent)
@@ -164,9 +163,8 @@ card fills in.
 ### Nav hide-when-empty
 
 The sidebar link **Featured** (between **H2H** and the rest) only renders when
-there is at least one **report-visible** featured entry. An empty catalog, or a
-catalog containing only excluded/hidden entries, keeps the default chrome — no
-dead link and no privacy signal.
+`featured` has at least one row. An empty catalog keeps the default chrome —
+no dead link.
 
 ---
 
@@ -208,7 +206,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/sync   # if API token is set
 | `repo rm` / `featured rm` returns "not found" / "not pinned" | The row was never added, or you are pointing at a different DB (`--db`). |
 | `invalid repo name: expected OWNER/REPO` | You passed a filter expression, `*`, or a bare name. Use `owner/repo`. |
 | Featured card shows no stars / description | Metadata sync has not run yet (or sync is disabled in `--demo`). |
-| Added a repo but `/` or `/featured` does not change | CLI `--db` and `serve` DB differ, the server has not refreshed metadata, or report visibility hides the repo. Check `gghstats repo report ls`. |
+| Added a repo but `/` or `/featured` does not change | CLI `--db` and `serve` DB differ. Pins affect `/` after the next sync; Featured nav/list should update as soon as the catalog row exists. |
 | Dashboard empty right after upgrading to 1.5.0 | Expected fail-closed: rows are `unknown` until the next sync. Trigger sync, then `gghstats repo report ls`. See [Upgrading to 1.5.0](../README.md#upgrading-to-150). |
 | `repo report ls` shows many `unknown` after upgrade | Sync has not classified visibility yet (or GitHub metadata fetch failed). Re-run sync; use `--json --visibility unknown` to list leftovers. |
 

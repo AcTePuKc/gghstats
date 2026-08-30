@@ -141,7 +141,7 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 
 ### 3.11 `GET /api/v1/featured`
 
-- Same auth. Dogfood for HTML `/featured` (showcase metadata only — **no** clones/views/paths). Only report-visible featured entries are counted or emitted.
+- Same auth. Dogfood for HTML `/featured` (showcase metadata only — **no** clones/views/paths). Catalog rows are counted and emitted regardless of report visibility.
 - Query (same as HTML): `sort` (`sort` default display order, `name`, `stars`), `dir` (`asc` default / `desc`), `q` (substring on `name` / `upstream_full_name`), `page` (default 1), `per_page` (default 25, max 100).
 - **200**: `total_count`, `items[]` (`store.Featured` JSON: `name`, `sort`, `upstream_full_name`, `upstream_description`, `upstream_stars`, `fork`, optional `parent_full_name`, `meta_updated_at`), plus echoed `sort`/`dir`/`q`/`page`/`per_page`/`total_pages`. Empty catalog → `items: []`, `total_count: 0`.
 

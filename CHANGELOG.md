@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Featured showcase is not a report surface (#47):** `/featured`, `GET /api/v1/featured`, nav, and the sitemap `/featured` URL use the catalog (`FilterFeatured` / `FeaturedCount`) again. Report visibility still applies to traffic/dashboard routes only. A vitrine entry no longer needs a collected `repos` row.
+
 ## [1.5.0] - 2026-08-30
 
 ### Changed
