@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **Report visibility:** `repos.github_visibility` + `repos.report_policy` with precedence `exclude > include > inherit`; `GGHSTATS_REPORT_PRIVATE`; CLI `gghstats repo report ls/set`; report surfaces fail closed (indistinguishable 404). Collection (`GGHSTATS_INCLUDE_PRIVATE` / filter / pins) stays separate from reporting. See `docs/plan-v1.5.0.md` (V-vis).
 - **Report inventory JSON (V-json):** `gghstats repo report ls --json` emits a JSON array of `{name,github_visibility,report_policy}`; optional `--visibility` / `--policy` filters for fail-closed post-upgrade scripting.
 - **Chart gap legend (U-legend):** repo detail traffic charts show a localized note that chart gaps mean GitHub omitted the day and `0` is confirmed zero traffic.
+- **Chart JSON download (X-chart):** repo page downloads chart-aligned clones/views JSON (`GET /{owner}/{repo}/traffic.json`); API dogfood via `GET …/traffic?dense=1` (or `download=1` for attachment). Default sparse traffic JSON unchanged. Download requires `x-api-token` only when `GGHSTATS_API_TOKEN` is set.
 
 ## [1.4.0] - 2026-08-29
 

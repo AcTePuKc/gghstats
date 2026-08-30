@@ -41,9 +41,9 @@ func TestExcludedRepositoryDoesNotLeakAcrossReportRoutes(t *testing.T) {
 			t.Fatalf("%s leaked excluded repo: %s", path, w.Body.String())
 		}
 	}
-	for _, path := range []string{"/secret/nope", "/api/v1/repos/secret/nope", "/api/v1/repos/secret/nope/traffic", "/api/v1/repos/secret/nope/stars", "/api/v1/repos/secret/nope/popular"} {
+	for _, path := range []string{"/secret/nope", "/secret/nope/traffic.json", "/api/v1/repos/secret/nope", "/api/v1/repos/secret/nope/traffic", "/api/v1/repos/secret/nope/stars", "/api/v1/repos/secret/nope/popular"} {
 		r := httptest.NewRequest(http.MethodGet, path, nil)
-		if strings.HasPrefix(path, "/api/") {
+		if strings.HasPrefix(path, "/api/") || strings.HasSuffix(path, "/traffic.json") {
 			r.Header.Set("x-api-token", "token")
 		}
 		w := httptest.NewRecorder()

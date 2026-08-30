@@ -198,6 +198,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	mountSEORoutes(mux, cfg)
 	repoHandler := handleRepoPage(cfg, cfg.Store, tmpl)
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
+	trafficJSON := optionalAPITokenMiddleware(cfg.APIToken, handleRepoTrafficJSONExport(cfg))
 	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg))
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
 	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
@@ -217,6 +218,14 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 			return
 		}
 		parts := strings.SplitN(strings.Trim(path, "/"), "/", 3)
+		// Dispatched here (not a mux pattern) to avoid conflicting with GET /static/.
+		if len(parts) == 3 && parts[2] == "traffic.json" &&
+			parts[0] != "static" && parts[0] != "api" && parts[0] != "theme" && parts[0] != "h2h" {
+			r.SetPathValue("owner", parts[0])
+			r.SetPathValue("repo", parts[1])
+			trafficJSON(w, r)
+			return
+		}
 		if len(parts) == 2 && parts[0] != "static" && parts[0] != "api" && parts[0] != "theme" && parts[0] != "h2h" {
 			r.SetPathValue("owner", parts[0])
 			r.SetPathValue("repo", parts[1])
@@ -299,6 +308,19 @@ func apiMiddleware(token string, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if r.Header.Get("x-api-token") != token {
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// optionalAPITokenMiddleware requires x-api-token only when token is configured
+// (option 3 for chart JSON download). Empty token → public, still report-scoped in the handler.
+func optionalAPITokenMiddleware(token string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if token != "" && r.Header.Get("x-api-token") != token {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 			return
 		}
@@ -865,6 +887,8 @@ func handleRepoPage(cfg Config, db *store.Store, tmpl *template.Template) http.H
 			ChartViewsTitle  string
 			ChartStarsTitle  string
 			SyncRepoAria     string
+			TrafficJSONURL   string
+			TrafficJSONAuth  bool
 			Momentum7d       string
 			Momentum30d      string
 			Momentum7dUp     bool
@@ -885,6 +909,8 @@ func handleRepoPage(cfg Config, db *store.Store, tmpl *template.Template) http.H
 			ChartViewsTitle:  lb.Tfmt("repo.chart_views", map[string]string{"repo": fullName}),
 			ChartStarsTitle:  lb.Tfmt("repo.chart_stars", map[string]string{"repo": fullName}),
 			SyncRepoAria:     lb.Tfmt("common.sync_repo_aria", map[string]string{"repo": fullName}),
+			TrafficJSONURL:   "/" + fullName + "/traffic.json",
+			TrafficJSONAuth:  cfg.APIToken != "",
 			Momentum7d:       momentum7d,
 			Momentum30d:      momentum30d,
 			Momentum7dUp:     momentum7dUp,
