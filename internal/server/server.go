@@ -985,7 +985,7 @@ func renderLayoutStatus(w http.ResponseWriter, r *http.Request, tmpl *template.T
 		data.SyncUIEnabled = true
 	}
 	if cfg.Store != nil {
-		if n, err := cfg.Store.ReportFeaturedCount(cfg.ReportVisibility); err == nil && n > 0 {
+		if n, err := cfg.Store.FeaturedCount(); err == nil && n > 0 {
 			data.ShowFeatured = true
 		}
 	}

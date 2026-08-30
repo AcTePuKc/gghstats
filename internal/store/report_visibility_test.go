@@ -138,14 +138,24 @@ func TestReportScopedTotals(t *testing.T) {
 	}
 }
 
-func TestReportScopedFeatured(t *testing.T) {
+func TestFeaturedCatalogIgnoresReportScope(t *testing.T) {
 	s := reportTotalsFixture(t)
-	scope := ReportVisibility{}
-	entries, total, err := s.FilterReportFeatured(scope, "", "sort", "asc", 1, 25)
-	if err != nil || total != 1 || len(entries) != 1 || entries[0].Name != "public/visible" {
-		t.Fatalf("report featured=%+v total=%d err=%v", entries, total, err)
+	entries, total, err := s.FilterFeatured("", "sort", "asc", 1, 25)
+	if err != nil || total != 2 || len(entries) != 2 {
+		t.Fatalf("catalog featured=%+v total=%d err=%v", entries, total, err)
 	}
-	if got, err := s.ReportFeaturedCount(scope); err != nil || got != 1 {
-		t.Fatalf("report featured count=%d err=%v", got, err)
+	if got, err := s.FeaturedCount(); err != nil || got != 2 {
+		t.Fatalf("featured count=%d err=%v", got, err)
+	}
+}
+
+func TestFeaturedCatalogWithoutCollectedRepo(t *testing.T) {
+	s := tempDB(t)
+	if err := s.AddFeatured("avelino/awesome-go"); err != nil {
+		t.Fatal(err)
+	}
+	entries, total, err := s.FilterFeatured("", "sort", "asc", 1, 25)
+	if err != nil || total != 1 || len(entries) != 1 || entries[0].Name != "avelino/awesome-go" {
+		t.Fatalf("vitrine-only featured=%+v total=%d err=%v", entries, total, err)
 	}
 }

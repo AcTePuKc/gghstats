@@ -95,7 +95,7 @@ func handleSitemap(cfg Config) http.HandlerFunc {
 			{Loc: base + "/h2h"},
 		}
 		if cfg.Store != nil {
-			if n, err := cfg.Store.ReportFeaturedCount(cfg.ReportVisibility); err != nil {
+			if n, err := cfg.Store.FeaturedCount(); err != nil {
 				slog.Warn("sitemap: featured count", "error", err)
 			} else if n > 0 {
 				urls = append(urls, sitemapURL{Loc: base + "/featured"})
