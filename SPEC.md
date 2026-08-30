@@ -245,7 +245,7 @@ GitHub returns stargazer pages **newest-first**; gghstats always sorts ascending
 | `gghstats export --repo OWNER/REPO` | Write traffic CSV to stdout or `--output` (`--days`, default 14) |
 | `gghstats backup --output PATH` | Snapshot DB via SQLite `VACUUM INTO` |
 | `gghstats restore --input PATH` | Replace target DB by file copy; stop `serve` if the DB is open |
-| `gghstats repo report ls` | List stored repository, GitHub visibility, and report policy |
+| `gghstats repo report ls` | List stored repository, GitHub visibility, and report policy. Flags: `--json` (JSON array), `--visibility public\|private\|unknown`, `--policy inherit\|include\|exclude` |
 | `gghstats repo report set OWNER/REPO inherit\|include\|exclude` | Change report policy only; collection and SQLite history remain intact |
 
 Shared flags for fetch/report/export: `--repo` / `GGHSTATS_REPO`, `--token` / `GGHSTATS_GITHUB_TOKEN`, `--db` / `GGHSTATS_DB`.

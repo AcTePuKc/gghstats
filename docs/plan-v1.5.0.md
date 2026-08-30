@@ -150,7 +150,7 @@ views chart data as JSON for Grafana, Observable, notebooks, BI.
 - [x] CHANGELOG `[Unreleased]` for F-fresh + V-vis
 - [x] ROADMAP 1.5.0 band row + Next retarget
 - [x] SPEC §3.4 / §4.8 freshness + visibility; §8 dual missing-day semantics
-- [ ] Implement V-json (`repo report ls --json` + filters)
+- [x] Implement V-json (`repo report ls --json` + filters)
 - [ ] Implement U-legend (i18n: null gap vs confirmed zero)
 - [ ] Implement X-chart (dense dogfood + repo-page download)
 - [ ] Doc checklist re-verify (`GGHSTATS_REPORT_PRIVATE` + `repo report` on all surfaces post-merge)
