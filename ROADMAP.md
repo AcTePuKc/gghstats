@@ -17,7 +17,7 @@ Detailed band plans (scope, exit criteria, checklist):
 | **1.1.0** | [docs/plan-v1.1.0.md](docs/plan-v1.1.0.md) (closed) |
 | **1.2.0 / 1.3.0** | No separate band plan file — scope in [CHANGELOG.md](CHANGELOG.md) |
 | **1.4.0** | [docs/plan-v1.4.0.md](docs/plan-v1.4.0.md) (closed) |
-| **1.5.0** | [docs/plan-v1.5.0.md](docs/plan-v1.5.0.md) (open) |
+| **1.5.0** | [docs/plan-v1.5.0.md](docs/plan-v1.5.0.md) (closed) |
 
 ## Principles
 
@@ -74,7 +74,7 @@ Detailed band plans (scope, exit criteria, checklist):
 
 ## Versioning (SemVer)
 
-Current release **1.4.0**. Active band **1.5.0** ([plan](docs/plan-v1.5.0.md)). Patch = third digit of the **current** minor.
+Current release **1.5.0**. Patch = third digit of the **current** minor.
 
 | Form | Examples | Meaning |
 |------|----------|---------|
@@ -84,15 +84,13 @@ Current release **1.4.0**. Active band **1.5.0** ([plan](docs/plan-v1.5.0.md)). 
 
 Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). Do not use `1.1.x` for fixes while HEAD is still 1.0.1.
 
-## Next (1.5.0 in progress)
+## Next
 
-Band plans through **1.4.0** are **closed**. Current tagged release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
-Active band: **[docs/plan-v1.5.0.md](docs/plan-v1.5.0.md)**.
+Band plans through **1.5.0** are **closed**. Current tagged release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
 
-**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, rank/share column, JSONL export), **1.4.0** (uniques UX, Featured JSON, sitemap `/featured`, Carlok #22–#25).
+**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, rank/share column, JSONL export), **1.4.0** (uniques UX, Featured JSON, sitemap `/featured`, Carlok #22–#25), **1.5.0** (traffic freshness, report visibility fail-closed, chart JSON / legend / `repo report ls --json`).
 
-**1.5.0 (open):** traffic freshness + report visibility (F-fresh / V-vis), then V-json, U-legend, X-chart per the band plan. Keep **plan ↔ ROADMAP ↔ SPEC ↔ CHANGELOG** in lockstep as slices land. Line B waits for **2.0.0**.
-
+**After 1.5.0:** patches on **1.5.x** as needed. Line B (webhooks / delta sync) waits for **2.0.0**. Keep **plan ↔ ROADMAP ↔ SPEC ↔ CHANGELOG** in lockstep.
 ## Explicit non-goals (this repo)
 
 - Multi-instance writers on one SQLite file.

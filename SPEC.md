@@ -1,6 +1,6 @@
 # Spec — HTTP API and sync
 
-Normative operator contracts for **gghstats** as of **v1.4.0**.
+Normative operator contracts for **gghstats** as of **v1.5.0**.
 **Client how-to (examples, auth, dogfood map):** **[docs/api.md](docs/api.md)**.  
 Narrative install/env: **[README.md](README.md)**. Product direction: **[ROADMAP.md](ROADMAP.md)**.
 

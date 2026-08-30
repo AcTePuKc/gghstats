@@ -157,4 +157,4 @@ views chart data as JSON for Grafana, Observable, notebooks, BI.
 - [x] Implement X-chart (dense dogfood + repo-page download)
 - [x] Doc checklist re-verify (`GGHSTATS_REPORT_PRIVATE` + `repo report` on all surfaces post-merge)
 - [x] Operator migration note (README / catalog) polish — fail-closed until next sync
-- [ ] `VERSION` 1.5.0 + `make release-check` + merge/tag (user OK)
+- [x] `VERSION` 1.5.0 bump on `develop` (release-check + merge/tag still need user OK)

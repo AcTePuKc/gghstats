@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-30
+
 ### Changed
 
 - **Important for operators (fail-closed reporting):** after upgrading to **1.5.0**, existing SQLite rows migrate to `github_visibility=unknown` + `report_policy=inherit`. **Repositories stay hidden from the dashboard, APIs, exports, badges, and other report surfaces until the next sync** (startup sync when `GGHSTATS_SYNC_ON_STARTUP=true`, the scheduled interval, UI Sync, or `POST /api/v1/sync`). This is expected — **traffic history is not deleted**. After sync records `public`/`private` (or you run `gghstats repo report set OWNER/REPO include`), report-visible repos reappear. See [README — Upgrading to 1.5.0](README.md#upgrading-to-150) and [Report visibility](README.md#report-visibility).
@@ -616,7 +618,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/hrodrig/gghstats/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/hrodrig/gghstats/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/hrodrig/gghstats/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/hrodrig/gghstats/compare/v1.1.0...v1.2.0
