@@ -83,8 +83,10 @@ views chart data as JSON for Grafana, Observable, notebooks, BI.
 - UI: download control on the repo page (same button language as index JSONL).
 - Dogfood: additive dense route (e.g. `?dense=1` or `/traffic/charts`) matching
   detail chart semantics + freshness metadata.
-- Auth / visibility: report-scoped (hidden repos → indistinguishable 404);
-  prefer reusing API-token / sessionStorage patterns already used for Sync.
+- Auth / visibility: report-scoped (hidden repos → indistinguishable 404).
+  HTML `/{owner}/{repo}/traffic.json` requires `x-api-token` **only when**
+  `GGHSTATS_API_TOKEN` is set (option 3); UI reuses Sync sessionStorage + modal.
+  Sparse API traffic remains behind the normal API token gate.
 - Filename: `gghstats-{owner}-{repo}-traffic-YYYYMMDD.json` (UTC).
 
 ## Frictions to close in SPEC/docs
@@ -152,7 +154,7 @@ views chart data as JSON for Grafana, Observable, notebooks, BI.
 - [x] SPEC §3.4 / §4.8 freshness + visibility; §8 dual missing-day semantics
 - [x] Implement V-json (`repo report ls --json` + filters)
 - [x] Implement U-legend (i18n: null gap vs confirmed zero)
-- [ ] Implement X-chart (dense dogfood + repo-page download)
+- [x] Implement X-chart (dense dogfood + repo-page download)
 - [ ] Doc checklist re-verify (`GGHSTATS_REPORT_PRIVATE` + `repo report` on all surfaces post-merge)
 - [ ] Operator migration note (README / catalog) polish if gaps remain
 - [ ] `VERSION` 1.5.0 + `make release-check` + merge/tag (user OK)

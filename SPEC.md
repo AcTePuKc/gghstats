@@ -36,7 +36,7 @@ This document describes **current** behavior. Changes that break clients must bu
 | `GET /api/v1/badge/{owner}/{repo}` | Public by default | SVG; optional `GGHSTATS_BADGE_PUBLIC=false` |
 | `GET /api/repos` | `x-api-token` | List + KPIs; optional `sort`/`dir`/`q`/`page`/`per_page` |
 | `GET /api/v1/repos/{owner}/{repo}` | `x-api-token` | Summary + momentum |
-| `GET /api/v1/repos/{owner}/{repo}/traffic` | `x-api-token` | Clones/views series |
+| `GET /api/v1/repos/{owner}/{repo}/traffic` | `x-api-token` | Clones/views series; `dense=1` / `download=1` chart-aligned |
 | `GET /api/v1/repos/{owner}/{repo}/stars` | `x-api-token` | Star history series |
 | `GET /api/v1/repos/{owner}/{repo}/popular` | `x-api-token` | Referrers + paths (~14d) |
 | `GET /api/v1/h2h` | `x-api-token` | Compare `a`/`b`/`w` + chart payload |
@@ -45,6 +45,7 @@ This document describes **current** behavior. Changes that break clients must bu
 | `GET` / `POST /api/v1/sync` | `x-api-token` | Sync coordinator |
 | `GET /metrics` | Public by default | Off with `GGHSTATS_METRICS=false` |
 | HTML UI (`/`, `/{owner}/{repo}`, `/h2h`, …) | Optional IP whitelist / rate limit | Omitted when `GGHSTATS_API_ONLY=true` |
+| `GET /{owner}/{repo}/traffic.json` | `x-api-token` only if `GGHSTATS_API_TOKEN` set | Chart-aligned download; report-scoped |
 | `/robots.txt`, `/sitemap.xml` | — | Omitted (404) when API-only |
 
 **Always exempt** from IP rate limit and IP whitelist: `/metrics`, `/api/v1/healthz`, `/api/v1/badge/*`, and each `local` prefix from `GGHSTATS_REVERSE_PROXY_RULES`.
@@ -101,10 +102,12 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 
 - Same auth gate as `/api/repos`.
 - Query `days`: UTC rolling window (default **30**); **0** = all stored days; max **3660**.
-- **200** JSON: `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`) plus `clones_freshness` / `views_freshness`. Each freshness object has `metric`, `status`, `fetched_at`, `latest_observed_day`, `latest_completed_utc_day`, `missing_completed_days`, and optional `error`.
-- `status` is one of `fresh`, `delayed`, `missing`, `failed`, or `never`. The completed day is UTC yesterday; current UTC day never counts as missing. A returned daily row with `count: 0` is an explicit zero. An omitted date is unknown, remains omitted by this API, and is not zero-filled.
+- **200** JSON (default, sparse): `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`) plus `clones_freshness` / `views_freshness`. Each freshness object has `metric`, `status`, `fetched_at`, `latest_observed_day`, `latest_completed_utc_day`, `missing_completed_days`, and optional `error`. Sparse series omit unknown calendar days (not zero-filled).
+- Query `dense=1`: same window and freshness, but `clones[]` / `views[]` are chart-aligned — one object per UTC day in `[from,to]`, with `count`/`uniques` as numbers or **`null`** for unknown gaps; response includes `"dense": true`. Default sparse shape is unchanged when `dense` is absent.
+- Query `download=1`: forces dense payload and sets `Content-Disposition: attachment` with filename `gghstats-{owner}-{repo}-traffic-YYYYMMDD.json` (UTC).
+- `status` is one of `fresh`, `delayed`, `missing`, `failed`, or `never`. The completed day is UTC yesterday; current UTC day never counts as missing. A returned daily row with `count: 0` is an explicit zero. An omitted date (sparse) or `null` (dense/chart) is unknown and is not inferred as zero.
 - Each successful metric response establishes its coverage window from its actual earliest and latest returned UTC dates. A latest observed date before UTC yesterday is `delayed`; `missing` is reserved for an omitted date inside that observed span. This avoids treating not-yet-published or quiet omitted days as false missing-data warnings.
-- The repository detail chart uses an aligned UTC calendar payload: explicit zero is `0`; unknown is `null` and creates a visible gap. Both the sparse API and dense chart omit cached rows inside the latest GitHub coverage window when that response did not confirm them. The HTML repo page shows a localized legend clarifying gap vs confirmed zero (`repo.chart_gap_legend`).
+- The repository detail chart uses the same aligned UTC calendar semantics as dense JSON. Both the sparse API and dense chart omit cached rows inside the latest GitHub coverage window when that response did not confirm them. The HTML repo page shows a localized legend clarifying gap vs confirmed zero (`repo.chart_gap_legend`) and a download control for `GET /{owner}/{repo}/traffic.json` (dense attachment; requires `x-api-token` only when `GGHSTATS_API_TOKEN` is set; always report-scoped).
 - Views and clones are independent: a failed endpoint retains successful sibling data and records metric failure/error state. The repo and sync run are not fully successful when either traffic metric fails.
 
 ### 3.5 `POST /api/v1/sync` and `GET /api/v1/sync`

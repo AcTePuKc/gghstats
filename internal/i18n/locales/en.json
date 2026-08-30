@@ -180,6 +180,7 @@
     "traffic_missing_one": "missing 1 completed day",
     "traffic_missing_many": "missing {{count}} completed days",
     "chart_gap_legend": "Chart gaps mean GitHub omitted that day; 0 is confirmed zero traffic.",
+    "download_chart_json": "Download chart JSON",
     "embed_title": "Embed badge",
     "embed_blurb": "Counts reflect data stored on this gghstats instance; they update after sync.",
     "embed_metric": "Metric",

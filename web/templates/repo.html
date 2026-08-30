@@ -124,7 +124,8 @@
     </div>
   </div>
   <div class="col-12">
-    <p class="small text-muted mb-0" data-gghstats-role="chart-gap-legend">{{call .T "repo.chart_gap_legend"}}</p>
+    <p class="small text-muted mb-2" data-gghstats-role="chart-gap-legend">{{call .T "repo.chart_gap_legend"}}</p>
+    <a href="{{.TrafficJSONURL}}" class="btn app-brutal-btn btn-sm text-uppercase fw-bold" data-gghstats-role="traffic-json-download" data-traffic-json-url="{{.TrafficJSONURL}}"{{if .TrafficJSONAuth}} data-requires-api-token="1"{{end}}>{{call .T "repo.download_chart_json"}}</a>
   </div>
 </div>
 
