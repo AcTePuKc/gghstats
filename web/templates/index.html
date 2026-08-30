@@ -152,22 +152,22 @@
           </div>
         </div>
         <div class="row row-cols-2 g-2" data-gghstats-stats-panel="total">
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_mean"}}</div><div class="fw-semibold">{{.ListCloneStats.Mean}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_median"}}</div><div class="fw-semibold">{{.ListCloneStats.Median}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_variance"}}</div><div class="fw-semibold">{{.ListCloneStats.Variance}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_stddev"}}</div><div class="fw-semibold">{{.ListCloneStats.StandardDeviation}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_min"}}</div><div class="fw-semibold">{{.ListCloneStats.Minimum}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_max"}}</div><div class="fw-semibold">{{.ListCloneStats.Maximum}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_p95"}}</div><div class="fw-semibold">{{.ListCloneStats.P95}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.MeanHelp}}" aria-label="{{call .T "index.stats_mean"}}. {{.ListCloneStats.MeanHelp}}" tabindex="0">{{call .T "index.stats_mean"}}</div><div class="fw-semibold">{{.ListCloneStats.Mean}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.MedianHelp}}" aria-label="{{call .T "index.stats_median"}}. {{.ListCloneStats.MedianHelp}}" tabindex="0">{{call .T "index.stats_median"}}</div><div class="fw-semibold">{{.ListCloneStats.Median}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.VarianceHelp}}" aria-label="{{call .T "index.stats_variance"}}. {{.ListCloneStats.VarianceHelp}}" tabindex="0">{{call .T "index.stats_variance"}}</div><div class="fw-semibold">{{.ListCloneStats.Variance}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.StandardDeviationHelp}}" aria-label="{{call .T "index.stats_stddev"}}. {{.ListCloneStats.StandardDeviationHelp}}" tabindex="0">{{call .T "index.stats_stddev"}}</div><div class="fw-semibold">{{.ListCloneStats.StandardDeviation}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.MinimumHelp}}" aria-label="{{call .T "index.stats_min"}}. {{.ListCloneStats.MinimumHelp}}" tabindex="0">{{call .T "index.stats_min"}}</div><div class="fw-semibold">{{.ListCloneStats.Minimum}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.MaximumHelp}}" aria-label="{{call .T "index.stats_max"}}. {{.ListCloneStats.MaximumHelp}}" tabindex="0">{{call .T "index.stats_max"}}</div><div class="fw-semibold">{{.ListCloneStats.Maximum}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListCloneStats.P95Help}}" aria-label="{{call .T "index.stats_p95"}}. {{.ListCloneStats.P95Help}}" tabindex="0">{{call .T "index.stats_p95"}}</div><div class="fw-semibold">{{.ListCloneStats.P95}}</div></div>
         </div>
         <div class="row row-cols-2 g-2" data-gghstats-stats-panel="unique" hidden>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_mean"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Mean}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_median"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Median}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_variance"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Variance}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_stddev"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.StandardDeviation}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_min"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Minimum}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_max"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Maximum}}</div></div>
-          <div class="col"><div class="small text-muted">{{call .T "index.stats_p95"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.P95}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.MeanHelp}}" aria-label="{{call .T "index.stats_mean"}}. {{.ListUniqueCloneStats.MeanHelp}}" tabindex="0">{{call .T "index.stats_mean"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Mean}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.MedianHelp}}" aria-label="{{call .T "index.stats_median"}}. {{.ListUniqueCloneStats.MedianHelp}}" tabindex="0">{{call .T "index.stats_median"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Median}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.VarianceHelp}}" aria-label="{{call .T "index.stats_variance"}}. {{.ListUniqueCloneStats.VarianceHelp}}" tabindex="0">{{call .T "index.stats_variance"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Variance}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.StandardDeviationHelp}}" aria-label="{{call .T "index.stats_stddev"}}. {{.ListUniqueCloneStats.StandardDeviationHelp}}" tabindex="0">{{call .T "index.stats_stddev"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.StandardDeviation}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.MinimumHelp}}" aria-label="{{call .T "index.stats_min"}}. {{.ListUniqueCloneStats.MinimumHelp}}" tabindex="0">{{call .T "index.stats_min"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Minimum}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.MaximumHelp}}" aria-label="{{call .T "index.stats_max"}}. {{.ListUniqueCloneStats.MaximumHelp}}" tabindex="0">{{call .T "index.stats_max"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.Maximum}}</div></div>
+          <div class="col"><div class="small text-muted" title="{{.ListUniqueCloneStats.P95Help}}" aria-label="{{call .T "index.stats_p95"}}. {{.ListUniqueCloneStats.P95Help}}" tabindex="0">{{call .T "index.stats_p95"}}</div><div class="fw-semibold">{{.ListUniqueCloneStats.P95}}</div></div>
         </div>
       </div>
       {{end}}

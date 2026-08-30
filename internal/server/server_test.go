@@ -263,6 +263,8 @@ func TestIndexPageCloneStatistics(t *testing.T) {
 		">12.25<",
 		">3.00<",
 		">1.00<",
+		`title="Daily average of the metric.`,
+		`tabindex="0"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("expected clone statistics content %q", want)

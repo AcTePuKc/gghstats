@@ -90,7 +90,17 @@
     "stats_stddev": "Standardabweichung",
     "stats_min": "Minimum",
     "stats_max": "Maximum",
-    "stats_p95": "P95"
+    "stats_p95": "P95",
+    "stats_unit_clones": "Klone",
+    "stats_unit_unique": "eindeutige Kloner",
+    "stats_help_mean": "Tagesdurchschnitt der Metrik. {{value}} {{unit}}/Tag im Mittel über den Zeitraum.",
+    "stats_help_median": "Zentralwert: 50% der Tage liegen darunter, 50% darüber. Typischer Tag: die Hälfte der Tage hatte ≤ {{value}} {{unit}}.",
+    "stats_help_variance": "Quadratische Streuung (Populationsvarianz). Nützlich zum Vergleich; schwer lesbar, weil die Einheit {{unit}}² ist. {{value}} {{unit}}² — große Skala, lieber die Standardabweichung ansehen.",
+    "stats_help_stddev": "Typische Abweichung vom Mittelwert in derselben Einheit. ± {{value}} {{unit}} um den Durchschnitt. Ein „normaler“ Tag liegt in [{{low}}, {{high}}].",
+    "stats_help_min": "Niedrigster beobachteter Wert. {{value}} {{unit}} am schwächsten Tag{{date}}.",
+    "stats_help_max": "Höchster beobachteter Wert. {{value}} {{unit}} am Spitzentag{{date}}.",
+    "stats_help_p95_one": "95. Perzentil (nearest-rank): 95% der Tage hatten einen Wert ≤ diesem. {{value}} — nur ~{{days}} Tag (5%) überschritt diesen Schwellenwert.",
+    "stats_help_p95_other": "95. Perzentil (nearest-rank): 95% der Tage hatten einen Wert ≤ diesem. {{value}} — nur ~{{days}} Tage (5%) überschritten diesen Schwellenwert."
   },
   "h2h": {
     "title": "Direktvergleich (H2H)",

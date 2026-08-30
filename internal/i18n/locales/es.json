@@ -90,7 +90,17 @@
     "stats_stddev": "Desviación estándar",
     "stats_min": "Mínimo",
     "stats_max": "Máximo",
-    "stats_p95": "P95"
+    "stats_p95": "P95",
+    "stats_unit_clones": "clones",
+    "stats_unit_unique": "clonadores únicos",
+    "stats_help_mean": "Promedio diario de la métrica. {{value}} {{unit}}/día de media en el período.",
+    "stats_help_median": "Valor central: el 50% de los días queda por debajo y el 50% por encima. Día típico: la mitad de los días tuvo ≤ {{value}} {{unit}}.",
+    "stats_help_variance": "Dispersión al cuadrado (varianza poblacional). Útil para comparar; menos legible porque la unidad es {{unit}}². {{value}} {{unit}}² — escala grande; mira la desviación estándar.",
+    "stats_help_stddev": "Desviación típica respecto a la media, en la misma unidad. ± {{value}} {{unit}} alrededor del promedio. Un día «normal» cae en [{{low}}, {{high}}].",
+    "stats_help_min": "Valor más bajo observado. {{value}} {{unit}} en el día más lento{{date}}.",
+    "stats_help_max": "Valor más alto observado. {{value}} {{unit}} en el día pico{{date}}.",
+    "stats_help_p95_one": "Percentil 95 (nearest-rank): el 95% de los días tuvo un valor ≤ este. {{value}} — solo ~{{days}} día (5%) superó este umbral.",
+    "stats_help_p95_other": "Percentil 95 (nearest-rank): el 95% de los días tuvo un valor ≤ este. {{value}} — solo ~{{days}} días (5%) superaron este umbral."
   },
   "h2h": {
     "title": "Cara a cara (H2H)",

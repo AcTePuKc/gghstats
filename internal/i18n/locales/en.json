@@ -90,7 +90,17 @@
     "stats_stddev": "Standard deviation",
     "stats_min": "Minimum",
     "stats_max": "Maximum",
-    "stats_p95": "P95"
+    "stats_p95": "P95",
+    "stats_unit_clones": "clones",
+    "stats_unit_unique": "unique cloners",
+    "stats_help_mean": "Daily average of the metric. {{value}} {{unit}}/day on average across the period.",
+    "stats_help_median": "Central value: 50% of days are below it, 50% above. Typical day: half the days had ≤ {{value}} {{unit}}.",
+    "stats_help_variance": "Squared dispersion (population variance). Useful for comparison; less readable because the unit is {{unit}}². {{value}} {{unit}}² — large scale, look at SD instead.",
+    "stats_help_stddev": "Typical deviation from the mean, in the same unit as the data. ± {{value}} {{unit}} around the average. A \"normal\" day falls in [{{low}}, {{high}}].",
+    "stats_help_min": "Lowest observed value. {{value}} {{unit}} on the slowest day{{date}}.",
+    "stats_help_max": "Highest observed value. {{value}} {{unit}} on the peak day{{date}}.",
+    "stats_help_p95_one": "95th percentile, nearest-rank: 95% of days had a value ≤ this. {{value}} — only ~{{days}} day (5%) exceeded this threshold.",
+    "stats_help_p95_other": "95th percentile, nearest-rank: 95% of days had a value ≤ this. {{value}} — only ~{{days}} days (5%) exceeded this threshold."
   },
   "h2h": {
     "title": "Head to Head (H2H)",
