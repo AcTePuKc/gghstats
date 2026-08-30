@@ -74,7 +74,7 @@ Detailed band plans (scope, exit criteria, checklist):
 
 ## Versioning (SemVer)
 
-Current release **1.5.0**. Patch = third digit of the **current** minor.
+Current release **1.5.1**. Patch = third digit of the **current** minor.
 
 | Form | Examples | Meaning |
 |------|----------|---------|
@@ -88,7 +88,7 @@ Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). D
 
 Band plans through **1.5.0** are **closed**. Current tagged release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
 
-**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, rank/share column, JSONL export), **1.4.0** (uniques UX, Featured JSON, sitemap `/featured`, Carlok #22–#25), **1.5.0** (traffic freshness, report visibility fail-closed, chart JSON / legend / `repo report ls --json`).
+**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, rank/share column, JSONL export), **1.4.0** (uniques UX, Featured JSON, sitemap `/featured`, Carlok #22–#25), **1.5.0** (traffic freshness, report visibility fail-closed, chart JSON / legend / `repo report ls --json`), **1.5.1** (Featured catalog not report-scoped, #47).
 
 **After 1.5.0:** patches on **1.5.x** as needed. Line B (webhooks / delta sync) waits for **2.0.0**. Keep **plan ↔ ROADMAP ↔ SPEC ↔ CHANGELOG** in lockstep.
 ## Explicit non-goals (this repo)

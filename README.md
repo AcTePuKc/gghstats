@@ -1,6 +1,6 @@
 # gghstats
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue)](https://github.com/hrodrig/gghstats/releases)
+[![Version](https://img.shields.io/badge/version-1.5.1-blue)](https://github.com/hrodrig/gghstats/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/gghstats)](https://github.com/hrodrig/gghstats/releases)
 [![CI](https://github.com/hrodrig/gghstats/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/gghstats/actions)
 [![codecov](https://codecov.io/gh/hrodrig/gghstats/graph/badge.svg)](https://codecov.io/gh/hrodrig/gghstats)
@@ -458,7 +458,8 @@ gghstats export --repo your-github-user/my-app --token "$GGHSTATS_GITHUB_TOKEN" 
 `gghstats repo` and `gghstats featured` steward two local SQLite catalogs
 (no GitHub token required): **pins** extend `GGHSTATS_FILTER` discovery
 (`FILTER ∪ pins`), **featured** curates the `/featured` showcase without
-touching `/` KPIs.
+touching `/` KPIs. Featured is a metadata vitrine, not a report surface:
+catalog rows appear even when the name is not collected in `repos`.
 
 ```bash
 gghstats repo add hrodrig/extra-one     # pin into the traffic set
@@ -477,8 +478,10 @@ boundary: public repositories with `inherit` are shown; private repositories
 need `GGHSTATS_REPORT_PRIVATE=true` or an explicit `include`; `unknown` is
 hidden; and `exclude` always wins. Use `gghstats repo report set OWNER/REPO
 inherit|include|exclude` to change a stored repository immediately. The policy
-is applied server-side to pages, APIs, exports, badges, metrics, sitemap, H2H,
-and reporting alerts; excluded direct requests respond as not found.
+is applied server-side to pages, APIs, exports, badges, metrics, sitemap
+repository URLs, H2H, and reporting alerts; excluded direct requests respond as
+not found. Featured (`/featured`, `GET /api/v1/featured`) is not in this
+boundary.
 
 This change never deletes collected history. An excluded repository continues
 to sync and remains in SQLite; changing it back to `include` makes its existing
@@ -614,8 +617,10 @@ For daemons, set an absolute path.
 **Fail-closed reporting:** after you deploy **1.5.0**, migration v8 sets every
 existing repository to `github_visibility=unknown` and `report_policy=inherit`.
 Until GitHub visibility is refreshed, **the dashboard, reporting APIs, exports,
-badges, metrics labels, sitemap, Featured, and H2H look empty or 404** — even
-though SQLite still holds all traffic history.
+badges, metrics labels, sitemap repository URLs, and H2H look empty or 404** —
+even though SQLite still holds all traffic history. Featured is not part of
+that fail-closed empty window (see [1.5.1](#upgrading-to-151) if `/featured`
+vanished on 1.5.0).
 
 1. **Backup** before upgrade: `gghstats backup --output gghstats.db.pre-1.5.0`
    (or copy the DB file).
@@ -630,6 +635,14 @@ though SQLite still holds all traffic history.
 
 Details: [Report visibility](#report-visibility) and
 [`docs/catalog-and-featured.md`](docs/catalog-and-featured.md).
+
+### Upgrading to 1.5.1
+
+**Featured showcase (#47):** 1.5.0 hid `/featured` (nav, HTML, API, sitemap URL)
+unless each catalog name was a collected, report-visible `repos` row. That was
+wrong — Featured is editorial metadata. **1.5.1** lists the catalog again. No
+sync required for the vitrine. Fail-closed empty **dashboard** until the next
+sync after 1.5.0 is unchanged.
 
 **Upgrading from 0.11.x:** if you relied on the old unset default `./data/gghstats.db`, either set `GGHSTATS_DB` to that path (or an absolute path to the old file) or move/copy the database into the new platform directory. Docker / Compose / systemd / BSD packages that already set `GGHSTATS_DB` are unchanged.
 

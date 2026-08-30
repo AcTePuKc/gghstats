@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-08-30
+
 ### Fixed
 
 - **Featured showcase is not a report surface (#47):** `/featured`, `GET /api/v1/featured`, nav, and the sitemap `/featured` URL use the catalog (`FilterFeatured` / `FeaturedCount`) again. Report visibility still applies to traffic/dashboard routes only. A vitrine entry no longer needs a collected `repos` row.
@@ -622,7 +624,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/hrodrig/gghstats/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/hrodrig/gghstats/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/hrodrig/gghstats/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/hrodrig/gghstats/compare/v1.2.0...v1.3.0
