@@ -16,7 +16,7 @@ Detailed band plans (scope, exit criteria, checklist):
 | **1.0.0** | [docs/plan-v1.0.0.md](docs/plan-v1.0.0.md) (closed) |
 | **1.1.0** | [docs/plan-v1.1.0.md](docs/plan-v1.1.0.md) (closed) |
 | **1.2.0 / 1.3.0** | No separate band plan file — scope in [CHANGELOG.md](CHANGELOG.md) |
-| **1.4.0** | [docs/plan-v1.4.0.md](docs/plan-v1.4.0.md) (in progress) |
+| **1.4.0** | [docs/plan-v1.4.0.md](docs/plan-v1.4.0.md) (closed) |
 
 ## Principles
 
@@ -72,7 +72,7 @@ Detailed band plans (scope, exit criteria, checklist):
 
 ## Versioning (SemVer)
 
-Current release **1.3.0**. Patch = third digit of the **current** minor.
+Current release **1.4.0**. Patch = third digit of the **current** minor.
 
 | Form | Examples | Meaning |
 |------|----------|---------|
@@ -82,13 +82,13 @@ Current release **1.3.0**. Patch = third digit of the **current** minor.
 
 Once **1.1.0** is tagged, patches of that line are `1.1.1`, `1.1.2` (`1.1.x`). Do not use `1.1.x` for fixes while HEAD is still 1.0.1.
 
-## Next (after 1.3.0)
+## Next (after 1.4.0)
 
-Band plans through **1.1.0** are **closed**. Active band: [plan-v1.4.0.md](docs/plan-v1.4.0.md). Current release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
+Band plans through **1.4.0** are **closed**. Current release: **`VERSION`** / [CHANGELOG.md](CHANGELOG.md).
 
-**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, `# - %` rank/share column, JSONL export).
+**Shipped after 1.1.0:** **1.2.0** (compact numbers, Featured pagination/search/sort), **1.3.0** (index unique-cloners visibility, rank/share column, JSONL export), **1.4.0** (uniques UX, Featured JSON, sitemap `/featured`, Carlok #22–#25).
 
-**1.4.0 (in progress):** repo/index unique-cloner UX; Featured JSON dogfood; sitemap `/featured`. Hold `VERSION` bump until Carlok UI issues (#22–#25) land or are deferred. Line B waits for **2.0.0**.
+**Next (1.5.0 proposed):** traffic freshness + report visibility ([PR #31](https://github.com/hrodrig/gghstats/pull/31)) — band plan lands after this release. Line B waits for **2.0.0**.
 
 ## Explicit non-goals (this repo)
 
