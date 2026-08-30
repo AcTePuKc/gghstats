@@ -1,7 +1,7 @@
 # Plan — v1.5.0
 
-**Status:** Drafting / ready to track — band contract for traffic correctness,
-report privacy, and repo chart JSON export.
+**Status:** **In progress** — F-fresh + V-vis landing on `develop` (keep
+**plan ↔ ROADMAP ↔ SPEC ↔ CHANGELOG ↔ README/api/man** aligned as slices merge).
 
 **Band goal:** Make GitHub traffic reporting honest about freshness and gaps;
 separate **collection** from **reporting** with fail-closed defaults; give
@@ -143,14 +143,16 @@ views chart data as JSON for Grafana, Observable, notebooks, BI.
 
 ## Checklist
 
-- [ ] Finalize this plan and open a docs PR → `develop` (gitflow)
-- [ ] Implement F-fresh (migrations, sync, API/UI freshness, chart null gaps)
-- [ ] Implement V-vis (migrations, report scope, CLI, fail-closed surfaces)
-- [ ] Local smoke: fail-closed → sync → exclude/restore one repo → freshness
+- [x] Finalize this plan and open a docs PR → `develop` (gitflow) — #38
+- [x] Implement F-fresh (migrations, sync, API/UI freshness, chart null gaps)
+- [x] Implement V-vis (migrations, report scope, CLI, fail-closed surfaces)
+- [x] Local smoke: fail-closed → sync → exclude/restore one repo → freshness
+- [x] CHANGELOG `[Unreleased]` for F-fresh + V-vis
+- [x] ROADMAP 1.5.0 band row + Next retarget
+- [x] SPEC §3.4 / §4.8 freshness + visibility; §8 dual missing-day semantics
 - [ ] Implement V-json (`repo report ls --json` + filters)
 - [ ] Implement U-legend (i18n: null gap vs confirmed zero)
 - [ ] Implement X-chart (dense dogfood + repo-page download)
-- [ ] SPEC §8 + api.md: alerts/rolling = 0; charts/dense export = null gaps
-- [ ] Doc checklist for `GGHSTATS_REPORT_PRIVATE` + `repo report`
-- [ ] ROADMAP 1.5.0 band row + CHANGELOG `[Unreleased]`
+- [ ] Doc checklist re-verify (`GGHSTATS_REPORT_PRIVATE` + `repo report` on all surfaces post-merge)
+- [ ] Operator migration note (README / catalog) polish if gaps remain
 - [ ] `VERSION` 1.5.0 + `make release-check` + merge/tag (user OK)

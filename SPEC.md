@@ -223,9 +223,12 @@ GitHub returns stargazer pages **newest-first**; gghstats always sorts ascending
   `GGHSTATS_REPORT_PRIVATE=true`. Inherited unknown repos remain hidden.
 - Collection/storage (`GGHSTATS_INCLUDE_PRIVATE`, filter, pins, manual fetch)
   is separate from report visibility. Changing a policy never deletes stored
-  history. Reports include HTML, reporting JSON, aggregate queries/charts,
-  exports, badges, metrics, sitemap, Featured, H2H, and alerts. Direct excluded
-  lookups return not-found without revealing existence.
+  history. **Public report surfaces** include HTML, reporting JSON, aggregate
+  queries/charts, exports, badges, metrics, sitemap, Featured, and H2H.
+  Direct excluded lookups return not-found without revealing existence.
+  **Operator alert evaluation** may include private/unknown/excluded repos
+  internally (operator’s own rules); privacy applies to public surfaces, not to
+  suppressing the operator’s configured alerts.
 - Migration v7 creates `traffic_metric_state` and `traffic_metric_coverage`.
   Migration v8 adds persisted visibility/policy to `repos`. Old rows upgrade to
   `unknown` + `inherit` and therefore remain hidden until metadata refresh or
@@ -321,7 +324,7 @@ Comparison windows for **drops** (A2) must be named in config/docs:
 | Concept | Operator meaning | Example |
 |---------|------------------|---------|
 | **Absolute high** | Window value is **at or above** a fixed number. | Today `hrodrig/pgwd` **clones ≥ 225** |
-| **Absolute floor / zero** | Window value is **below** a bar, or **exactly 0** (no traffic). Missing day row → **0**. | Today `hrodrig/groot` **clones == 0** |
+| **Absolute floor / zero** | Window value is **below** a bar, or **exactly 0** (no traffic). For **alert** windows and rolling sums (`clones_7d` / `clones_30d` / H2H / momentum): missing day row → **0**. Detail **charts** and dense chart export use **`null`** gaps instead (never infer zero); see §3.4. | Today `hrodrig/groot` **clones == 0** |
 | **Relative drop %** | Current window is X% **below** the comparison window. | `clones` WoW drop ≥ **30%** |
 | **Scope** | One `owner/name`, each synced repo, or **aggregate** all synced repos (sum). | Only `hrodrig/pgwd`, or **fleet total** |
 | **Aggregate (fleet)** | Sum metric across **all repos in the DB** (document whether `GGHSTATS_FILTER` narrows). No single `repo` field. | All clones ever stored **≥ 30000** |
