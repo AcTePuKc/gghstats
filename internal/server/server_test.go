@@ -288,7 +288,7 @@ func TestIndexPageCloneRankAndShare(t *testing.T) {
 
 	body := indexPageBody(t, New(Config{Store: db}))
 	for _, want := range []string{
-		"# - %",
+		"Rank",
 		"1st · 80.00%",
 		"2nd · 20.00%",
 		`href="/export.jsonl"`,
