@@ -20,18 +20,17 @@ func TestDomainNilSafe(t *testing.T) {
 	d.RefreshStoreGauges()
 }
 
-func TestRegisterDomainDefaultFilter(t *testing.T) {
+func TestRegisterDomainUsesUnlabeledRepoTotal(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	d := RegisterDomain(reg, DomainConfig{})
-	if d.filter != "*" {
-		t.Fatalf("filter = %q, want *", d.filter)
+	if d.reposTotal == nil {
+		t.Fatal("repos_total gauge was not registered")
 	}
 }
 
 func TestDomainObserveGitHubAndSync(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	d := RegisterDomain(reg, DomainConfig{
-		Filter: "*",
 		StoreRepoCount: func() (int, error) {
 			return 2, nil
 		},
@@ -103,7 +102,6 @@ func TestDomainRefreshStoreGauges(t *testing.T) {
 
 	reg := prometheus.NewRegistry()
 	d := RegisterDomain(reg, DomainConfig{
-		Filter: "org/*",
 		DBPath: dbPath,
 		StoreRepoCount: func() (int, error) {
 			return 5, nil
@@ -111,11 +109,7 @@ func TestDomainRefreshStoreGauges(t *testing.T) {
 	})
 	d.RefreshStoreGauges()
 
-	total, err := d.reposTotal.GetMetricWithLabelValues("org/*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v := testutil.ToFloat64(total); v != 5 {
+	if v := testutil.ToFloat64(d.reposTotal); v != 5 {
 		t.Fatalf("repos_total = %v, want 5", v)
 	}
 	if v := testutil.ToFloat64(d.dbSizeBytes); v != float64(len("sqlite-placeholder")) {

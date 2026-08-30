@@ -125,7 +125,7 @@ func handleBadge(cfg Config, db *store.Store) http.HandlerFunc {
 			return
 		}
 
-		summary, err := db.RepoByName(fullName)
+		summary, err := db.ReportRepoByName(cfg.ReportVisibility, fullName)
 		if err != nil {
 			writeBadgeError(w, r, http.StatusInternalServerError, "database error")
 			return

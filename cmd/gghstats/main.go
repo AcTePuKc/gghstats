@@ -23,7 +23,7 @@ Commands:
   backup   Snapshot the SQLite database (VACUUM INTO)
   restore  Replace the SQLite database from a backup file
   alert    Alert helpers (alert test = smoke-test sinks)
-  repo     Pin extra repos to the dashboard (add/rm/ls)
+  repo     Manage dashboard pins and report policy (add/rm/ls/report)
   featured Curate the Featured showcase (add/rm/ls)
   version  Print version information
 
@@ -42,6 +42,8 @@ Catalog (gghstats repo / gghstats featured — local SQLite, no GitHub token):
   repo add OWNER/REPO     Pin a repo to the dashboard (FILTER ∪ pins)
   repo rm  OWNER/REPO     Unpin a repo (error if not pinned)
   repo ls                 List pinned repos
+	  repo report ls          List visibility/policy (--json, --visibility, --policy)
+	  repo report set OWNER/REPO inherit|include|exclude
   featured add OWNER/REPO Add a repo to the Featured showcase (editorial; not on /)
   featured rm  OWNER/REPO Remove from the showcase (error if not present)
   featured ls             List showcase entries
@@ -61,6 +63,7 @@ Server env vars (serve):
   GGHSTATS_PORT                Listen port (default: 8080)
   GGHSTATS_FILTER              Repo filter (default: * = all)
   GGHSTATS_INCLUDE_PRIVATE     Include private repos (default false; 1/true/yes/on)
+  GGHSTATS_REPORT_PRIVATE      Include inherited private repos in reports (default false; unknown visibility remains hidden)
   GGHSTATS_SYNC_INTERVAL       Sync frequency (default: 1h)
   GGHSTATS_SYNC_ON_STARTUP     Run full sync before serving (default: true; false = use existing DB, sync later)
   GGHSTATS_SYNC_WORKERS        Concurrent repos per sync cycle (default: 4; same as --sync-workers)

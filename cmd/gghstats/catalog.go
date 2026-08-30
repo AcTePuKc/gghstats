@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -31,7 +32,123 @@ func validCatalogName(raw string) (string, error) {
 }
 
 // runRepo is the "gghstats repo" command family.
-func runRepo(args []string) error { return runCatalog("repo", "", args) }
+func runRepo(args []string) error {
+	if len(args) > 0 && args[0] == "report" {
+		return runRepoReport(args[1:])
+	}
+	return runCatalog("repo", "", args)
+}
+
+// runRepoReport is the supported operator interface for changing the reporting
+// boundary; it never changes collection or deletes stored data.
+func runRepoReport(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("repo report: expected ls|set")
+	}
+	switch args[0] {
+	case "ls":
+		return runRepoReportLs(args[1:], os.Stdout)
+	case "set":
+		return runRepoReportSet(args[1:], os.Stdout)
+	default:
+		return fmt.Errorf("repo report: unknown subcommand %q (ls|set)", args[0])
+	}
+}
+
+func runRepoReportLs(args []string, w io.Writer) error {
+	fs := flag.NewFlagSet("repo report ls", flag.ContinueOnError)
+	dbPath := envOr("GGHSTATS_DB", defaultDBPath())
+	asJSON := false
+	visibility := ""
+	policy := ""
+	fs.StringVar(&dbPath, "db", dbPath, "SQLite database path")
+	fs.BoolVar(&asJSON, "json", false, "emit JSON array")
+	fs.StringVar(&visibility, "visibility", "", "filter: public|private|unknown")
+	fs.StringVar(&policy, "policy", "", "filter: inherit|include|exclude")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if len(fs.Args()) != 0 {
+		return fmt.Errorf("repo report ls: unexpected argument")
+	}
+	visibility = strings.TrimSpace(visibility)
+	policy = strings.TrimSpace(policy)
+	if err := validateRepoReportLsFilters(visibility, policy); err != nil {
+		return err
+	}
+
+	db, err := store.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	states, err := db.ListRepoReportStates()
+	if err != nil {
+		return err
+	}
+	filtered := filterRepoReportStates(states, visibility, policy)
+	if asJSON {
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		return enc.Encode(filtered)
+	}
+	for _, state := range filtered {
+		fmt.Fprintf(w, "%s\t%s\t%s\n", state.Name, state.GitHubVisibility, state.ReportPolicy)
+	}
+	return nil
+}
+
+func validateRepoReportLsFilters(visibility, policy string) error {
+	if visibility != "" && visibility != store.VisibilityPublic && visibility != store.VisibilityPrivate && visibility != store.VisibilityUnknown {
+		return fmt.Errorf("repo report ls: invalid --visibility %q (public|private|unknown)", visibility)
+	}
+	if policy != "" && policy != store.ReportInherit && policy != store.ReportInclude && policy != store.ReportExclude {
+		return fmt.Errorf("repo report ls: invalid --policy %q (inherit|include|exclude)", policy)
+	}
+	return nil
+}
+
+func filterRepoReportStates(states []store.RepoReportState, visibility, policy string) []store.RepoReportState {
+	out := make([]store.RepoReportState, 0, len(states))
+	for _, state := range states {
+		if visibility != "" && state.GitHubVisibility != visibility {
+			continue
+		}
+		if policy != "" && state.ReportPolicy != policy {
+			continue
+		}
+		out = append(out, state)
+	}
+	return out
+}
+
+func runRepoReportSet(args []string, w io.Writer) error {
+	_, dbPath, rest, err := catalogFlagSet("repo report set", args)
+	if err != nil {
+		return err
+	}
+	if len(rest) != 2 {
+		return fmt.Errorf("repo report set: expected OWNER/REPO inherit|include|exclude")
+	}
+	name, err := validCatalogName(rest[0])
+	if err != nil {
+		return err
+	}
+	db, err := store.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	ok, err := db.SetRepoReportPolicy(name, rest[1])
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("repository not found")
+	}
+	fmt.Fprintf(w, "report policy for %s set to %s\n", name, rest[1])
+	return nil
+}
 
 // runFeatured is the "gghstats featured" command family.
 func runFeatured(args []string) error { return runCatalog("featured", "", args) }
@@ -58,6 +175,14 @@ func runCatalog(kind, sub string, args []string) error {
 }
 
 func catalogUsage(kind string) string {
+	if kind == "repo" {
+		return `gghstats repo <add|rm|ls|report> [flags]
+
+  gghstats repo report ls [--json] [--visibility public|private|unknown] [--policy inherit|include|exclude]
+  gghstats repo report set OWNER/REPO inherit|include|exclude
+
+Report policy affects reporting only; collection and SQLite storage continue.`
+	}
 	return fmt.Sprintf(`gghstats %s <add|rm|ls> [flags]
 
   %s add OWNER/REPO   Pin/showcase a repo (idempotent)

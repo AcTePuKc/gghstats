@@ -126,6 +126,57 @@ func (s *Store) FeaturedCount() (int, error) {
 	return n, err
 }
 
+// ReportFeaturedCount and FilterReportFeatured apply the same server-side
+// visibility decision as every other report surface. A featured catalog entry
+// without a reportable repository is intentionally invisible.
+func (s *Store) ReportFeaturedCount(scope ReportVisibility) (int, error) {
+	entries, _, err := s.FilterReportFeatured(scope, "", "sort", "asc", 1, 1_000_000)
+	return len(entries), err
+}
+
+func (s *Store) FilterReportFeatured(scope ReportVisibility, query, sort, dir string, page, perPage int) ([]Featured, int, error) {
+	entries, _, err := s.FilterFeatured(query, sort, dir, 1, 1_000_000)
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]Featured, 0, len(entries))
+	for _, entry := range entries {
+		// A catalog entry is not reportable until it has a collected repository
+		// record. This keeps a manually entered name from bypassing the boundary.
+		var exists int
+		err := s.db.QueryRow(`SELECT 1 FROM repos WHERE name=?`, entry.Name).Scan(&exists)
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return nil, 0, err
+		}
+		ok, err := s.reportVisible(entry.Name, scope)
+		if err != nil {
+			return nil, 0, err
+		}
+		if ok {
+			out = append(out, entry)
+		}
+	}
+	total := len(out)
+	if page < 1 {
+		page = 1
+	}
+	if perPage <= 0 {
+		perPage = total
+	}
+	start := (page - 1) * perPage
+	if start >= total {
+		return []Featured{}, total, nil
+	}
+	end := start + perPage
+	if end > total {
+		end = total
+	}
+	return out[start:end], total, nil
+}
+
 // featuredSortCol maps an allowed sort key to a SQL column (defence in depth).
 func featuredSortCol(sort string) string {
 	switch sort {

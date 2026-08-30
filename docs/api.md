@@ -51,6 +51,16 @@ x-api-token: your-api-token
 
 **Public without token:** `GET /api/v1/healthz`, `GET /metrics` (unless disabled), and badges when `GGHSTATS_BADGE_PUBLIC=true` (default).
 
+## Report visibility applies to every reporting route
+
+The server filters report data before it is rendered or serialized. A repository
+that is excluded by its stored report policy, or hidden by the default
+private/unknown policy, is absent from lists, totals, exports, charts, H2H,
+Featured, badges, metrics, and sitemap. Direct repo/badge/API paths return the
+same **404** as an unknown repository; clients must not use a 404 to infer
+whether a repository exists locally. See [README report visibility](../README.md#report-visibility)
+for policy precedence and `GGHSTATS_REPORT_PRIVATE`.
+
 **Browser SPAs:** do **not** put `GGHSTATS_API_TOKEN` in a public bundle. Use a BFF/proxy that adds `x-api-token`, or restrict CORS. With `GGHSTATS_API_ONLY` and open CORS (`*`), `serve` logs a startup warning.
 
 A matching `x-api-token` also **bypasses the IP whitelist** on protected paths (token is still validated).
@@ -89,12 +99,13 @@ Applies to authenticated JSON handlers (repos, traffic, dogfood, sync, …), not
 | GET | `/api/repos` | Yes | Index list + KPIs |
 | GET | `/api/v1/charts/index-clones` | Yes | Index clones chart series |
 | GET | `/api/v1/repos/{owner}/{repo}` | Yes | Repo summary + momentum |
-| GET | `/api/v1/repos/{owner}/{repo}/traffic` | Yes | Clones/views time series |
+| GET | `/api/v1/repos/{owner}/{repo}/traffic` | Yes | Clones/views time series (`dense=1` / `download=1` optional) |
 | GET | `/api/v1/repos/{owner}/{repo}/stars` | Yes | Star history |
 | GET | `/api/v1/repos/{owner}/{repo}/popular` | Yes | Referrers + paths (14d) |
 | GET | `/api/v1/h2h` | Yes | Head-to-head compare |
 | GET | `/api/v1/featured` | Yes | Featured showcase list (metadata) |
 | GET/POST | `/api/v1/sync` | Yes | Sync status / trigger |
+| GET | `/{owner}/{repo}/traffic.json` | If token set | Chart-aligned dense download (HTML; report-scoped) |
 | GET | `/metrics` | No* | Prometheus |
 
 \* Off with `GGHSTATS_METRICS=false`.
@@ -108,7 +119,7 @@ Use this when rebuilding the dashboard in another UI.
 | UI surface | Calls |
 |------------|--------|
 | **Index** | `GET /api/repos` (+ optional `sort`/`dir`/`q`/`page`) and `GET /api/v1/charts/index-clones` |
-| **Repo page** | `GET /api/v1/repos/{o}/{r}`, `…/traffic?days=365` (or 30), `…/stars`, `…/popular` |
+| **Repo page** | `GET /api/v1/repos/{o}/{r}`, `…/traffic?days=365` (or 30; optional `dense=1`), `…/stars`, `…/popular`; HTML download `GET /{o}/{r}/traffic.json` |
 | **H2H** | `GET /api/v1/h2h?a=owner/a&b=owner/b&w=7d` |
 | **Featured** | `GET /api/v1/featured` (+ optional `sort`/`dir`/`q`/`page`/`per_page`) |
 | **Sync button** | `POST /api/v1/sync` or `POST /api/v1/sync?repo=owner/name`; poll `GET /api/v1/sync` |
@@ -131,7 +142,9 @@ curl -sS "$BASE/api/v1/healthz"
 
 ### `GET /api/repos`
 
-List repositories with aggregate KPIs (dogfood for the index).
+List report-visible repositories with aggregate KPIs (dogfood for the index).
+`items`, `total_count`, and every total exclude repositories hidden by report
+policy or inherited private/unknown visibility.
 
 **Query**
 
@@ -189,7 +202,10 @@ curl -sS -H "x-api-token: $TOKEN" \
 
 ### `GET /api/v1/charts/index-clones`
 
-Aggregated daily clones across the **same filter** as `/api/repos` (`sort`/`dir`/`q`). No pagination.
+Aggregated daily clones across the **same report scope and filter** as
+`/api/repos` (`sort`/`dir`/`q`). No pagination. It is an aggregate, not a
+coverage audit: use a repository traffic response when a partial GitHub window
+would matter.
 
 ```bash
 curl -sS -H "x-api-token: $TOKEN" \
@@ -248,7 +264,7 @@ curl -sS -H "x-api-token: $TOKEN" \
 }
 ```
 
-Unknown repo → **404** `{"error":"not_found"}`.
+Unknown or non-report-visible repo → **404** `{"error":"not_found"}`.
 
 ---
 
@@ -259,11 +275,15 @@ Daily clones and views.
 | Query | Default | Notes |
 |-------|---------|--------|
 | `days` | `30` | UTC rolling window inclusive of today. `0` = all stored days. Max `3660`. |
+| `dense` | (off) | `1` = chart-aligned series: every UTC day in `[from,to]`; unknown days use `null` `count`/`uniques`; adds `"dense": true`. Default remains sparse (omitted days). |
+| `download` | (off) | `1` = dense payload + `Content-Disposition` attachment (`gghstats-{owner}-{repo}-traffic-YYYYMMDD.json`). |
 
 ```bash
 curl -sS -H "x-api-token: $TOKEN" \
   "$BASE/api/v1/repos/hrodrig/gghstats/traffic?days=30"
 ```
+
+Sparse example:
 
 ```json
 {
@@ -276,11 +296,68 @@ curl -sS -H "x-api-token: $TOKEN" \
   ],
   "views": [
     {"date": "2026-07-01", "count": 50, "uniques": 20}
-  ]
+  ],
+  "clones_freshness": {
+    "metric": "clones",
+    "status": "fresh",
+    "fetched_at": "2026-07-22T12:00:00Z",
+    "latest_observed_day": "2026-07-21",
+    "latest_completed_utc_day": "2026-07-21",
+    "missing_completed_days": []
+  },
+  "views_freshness": {
+    "metric": "views",
+    "status": "missing",
+    "fetched_at": "2026-07-22T12:00:00Z",
+    "latest_observed_day": "2026-07-21",
+    "latest_completed_utc_day": "2026-07-21",
+    "missing_completed_days": ["2026-07-20"]
+  }
 }
 ```
 
-Missing calendar days are **omitted** (not zero-filled).
+Dense dogfood (`dense=1` or `download=1`):
+
+```bash
+curl -sS -H "x-api-token: $TOKEN" \
+  "$BASE/api/v1/repos/hrodrig/gghstats/traffic?days=3&dense=1"
+```
+
+```json
+{
+  "name": "hrodrig/gghstats",
+  "days": 3,
+  "from": "2026-07-20",
+  "to": "2026-07-22",
+  "dense": true,
+  "clones": [
+    {"date": "2026-07-20", "count": null, "uniques": null},
+    {"date": "2026-07-21", "count": 0, "uniques": 0},
+    {"date": "2026-07-22", "count": 4, "uniques": 2}
+  ],
+  "views": [],
+  "clones_freshness": {},
+  "views_freshness": {}
+}
+```
+
+`clones_freshness` and `views_freshness` are independent. Their `status` is
+`fresh`, `delayed`, `missing`, `failed`, or `never`; a failed metric also has
+an `error` field. `latest_completed_utc_day` is UTC yesterday, so today never
+counts as missing. A successful response's observed coverage span is its actual
+earliest-to-latest returned UTC date: a response not reaching yesterday is
+`delayed`, while `missing` means an absent day inside that span. Missing or
+unconfirmed calendar days are **omitted** by the default sparse API (not
+zero-filled): an explicit `count: 0` is confirmed zero traffic, while absence is
+unknown. Cached rows omitted by the latest response inside its coverage span are
+not returned as confirmed traffic. The HTML detail chart and dense JSON keep all
+UTC dates and send unknown values as `null` so they render as gaps.
+
+**HTML download:** `GET /{owner}/{repo}/traffic.json` returns the same dense
+attachment as `download=1`. Report-scoped (excluded → 404). Requires
+`x-api-token` **only when** `GGHSTATS_API_TOKEN` is set; if the token is unset,
+the download is public like other HTML report surfaces. The repo page button
+uses fetch + session token when auth is required.
 
 ---
 
@@ -396,7 +473,9 @@ Scores are **shares 0–100 that sum to 100** (same formula as the HTML H2H page
 
 ### `GET /api/v1/featured`
 
-Featured showcase list (dogfood for HTML `/featured`). **Metadata only** — no traffic clones/views.
+Featured showcase list (dogfood for HTML `/featured`). **Metadata only** — no
+traffic clones/views. The list and `total_count` include only report-visible
+entries, so the catalog cannot expose an excluded repository.
 
 | Param | Default | Notes |
 |-------|---------|--------|
@@ -486,7 +565,7 @@ curl -sS "$BASE/api/v1/badge/hrodrig/gghstats?metric=clones" -o badge.svg
 | `style` | `flat`, `flat-square` | `flat` |
 | `label` | custom left text | metric name |
 
-Set `GGHSTATS_BADGE_PUBLIC=false` to require `x-api-token` (breaks raw GitHub image embeds without a proxy).
+Set `GGHSTATS_BADGE_PUBLIC=false` to require `x-api-token` (breaks raw GitHub image embeds without a proxy). A non-report-visible repository returns 404 even when badges are public.
 
 ---
 

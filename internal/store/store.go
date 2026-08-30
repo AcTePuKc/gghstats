@@ -65,6 +65,8 @@ func (s *Store) migrate() error {
 		migrateV4,
 		migrateV5,
 		migrateV6,
+		migrateV7,
+		migrateV8,
 	}
 
 	var current int
@@ -221,6 +223,64 @@ func migrateV6(db *sql.DB) error {
 	return nil
 }
 
+// migrateV7 records the provenance of each successful GitHub traffic response.
+// Traffic data tables intentionally remain append-only history; coverage says which
+// dates were explicitly present in the latest successful response, including zeroes.
+func migrateV7(db *sql.DB) error {
+	stmts := []string{
+		`CREATE TABLE IF NOT EXISTS traffic_metric_state (
+			repo TEXT NOT NULL,
+			metric TEXT NOT NULL,
+			last_success_at TEXT NOT NULL DEFAULT '',
+			latest_observed_date TEXT NOT NULL DEFAULT '',
+			coverage_from TEXT NOT NULL DEFAULT '',
+			coverage_to TEXT NOT NULL DEFAULT '',
+			last_status TEXT NOT NULL DEFAULT 'never',
+			last_error TEXT NOT NULL DEFAULT '',
+			PRIMARY KEY (repo, metric)
+		)`,
+		`CREATE TABLE IF NOT EXISTS traffic_metric_coverage (
+			repo TEXT NOT NULL,
+			metric TEXT NOT NULL,
+			date TEXT NOT NULL,
+			seen_at TEXT NOT NULL,
+			PRIMARY KEY (repo, metric, date)
+		)`,
+	}
+	for _, stmt := range stmts {
+		if _, err := db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// migrateV8 separates locally collected repository data from data that may be
+// used in reports. Existing rows are deliberately unknown until GitHub metadata
+// is refreshed or an operator explicitly includes them.
+func migrateV8(db *sql.DB) error {
+	// Migrations are advanced only after this function succeeds. Make each
+	// column addition restart-safe so an interrupted v8 upgrade can resume.
+	for _, column := range []struct{ name, definition string }{
+		{"github_visibility", "TEXT NOT NULL DEFAULT 'unknown'"},
+		{"report_policy", "TEXT NOT NULL DEFAULT 'inherit'"},
+	} {
+		var exists int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('repos') WHERE name=?`, column.name).Scan(&exists); err != nil {
+			return err
+		}
+		if exists == 0 {
+			if _, err := db.Exec(`ALTER TABLE repos ADD COLUMN ` + column.name + ` ` + column.definition); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS repos_report_visibility_idx ON repos(github_visibility, report_policy)`); err != nil {
+		return err
+	}
+	return nil
+}
+
 // --- Upsert methods ---
 
 // UpsertView inserts or replaces a single day of view data.
@@ -247,6 +307,129 @@ func (s *Store) UpsertClone(repo, date string, count, uniques int) error {
 		repo, date, count, uniques,
 	)
 	return err
+}
+
+// TrafficMetricState is persisted freshness and coverage metadata for one GitHub
+// traffic endpoint. A missing coverage row is deliberately unknown, never zero.
+type TrafficMetricState struct {
+	Repo               string `json:"repo"`
+	Metric             string `json:"metric"`
+	LastSuccessAt      string `json:"last_success_at,omitempty"`
+	LatestObservedDate string `json:"latest_observed_day,omitempty"`
+	CoverageFrom       string `json:"coverage_from,omitempty"`
+	CoverageTo         string `json:"coverage_to,omitempty"`
+	LastStatus         string `json:"last_status"`
+	LastError          string `json:"last_error,omitempty"`
+}
+
+func validTrafficMetric(metric string) bool { return metric == "views" || metric == "clones" }
+
+// RecordTrafficMetricSuccess persists returned daily rows and their response
+// coverage atomically. coverageFrom/To describe GitHub's rolling response window.
+func (s *Store) RecordTrafficMetricSuccess(repo, metric string, rows []DayRow, fetchedAt time.Time, coverageFrom, coverageTo string) error {
+	if !validTrafficMetric(metric) {
+		return fmt.Errorf("unsupported traffic metric %q", metric)
+	}
+	fetched := fetchedAt.UTC().Format(time.RFC3339)
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// Coverage represents exactly the latest successful GitHub response, not a
+	// union of prior responses that happen to share a timestamp resolution.
+	if _, err := tx.Exec(`DELETE FROM traffic_metric_coverage WHERE repo=? AND metric=?`, repo, metric); err != nil {
+		return err
+	}
+	latest := ""
+	for _, r := range rows {
+		if r.Date > latest {
+			latest = r.Date
+		}
+		var q string
+		if metric == "views" {
+			q = `INSERT INTO views (repo, date, count, uniques) VALUES (?, ?, ?, ?) ON CONFLICT (repo, date) DO UPDATE SET count=excluded.count, uniques=excluded.uniques`
+		} else {
+			q = `INSERT INTO clones (repo, date, count, uniques) VALUES (?, ?, ?, ?) ON CONFLICT (repo, date) DO UPDATE SET count=excluded.count, uniques=excluded.uniques`
+		}
+		if _, err := tx.Exec(q, repo, r.Date, r.Count, r.Uniques); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO traffic_metric_coverage (repo, metric, date, seen_at) VALUES (?, ?, ?, ?) ON CONFLICT (repo, metric, date) DO UPDATE SET seen_at=excluded.seen_at`, repo, metric, r.Date, fetched); err != nil {
+			return err
+		}
+	}
+	_, err = tx.Exec(`INSERT INTO traffic_metric_state (repo, metric, last_success_at, latest_observed_date, coverage_from, coverage_to, last_status, last_error)
+		VALUES (?, ?, ?, ?, ?, ?, 'success', '')
+		ON CONFLICT (repo, metric) DO UPDATE SET last_success_at=excluded.last_success_at, latest_observed_date=excluded.latest_observed_date, coverage_from=excluded.coverage_from, coverage_to=excluded.coverage_to, last_status='success', last_error=''`,
+		repo, metric, fetched, latest, coverageFrom, coverageTo)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// RecordTrafficMetricFailure preserves the last good coverage but exposes a failed
+// current fetch, so a successful clone response cannot hide a failed views response.
+func (s *Store) RecordTrafficMetricFailure(repo, metric string, err error) error {
+	if !validTrafficMetric(metric) {
+		return fmt.Errorf("unsupported traffic metric %q", metric)
+	}
+	if err == nil {
+		return nil
+	}
+	_, e := s.db.Exec(`INSERT INTO traffic_metric_state (repo, metric, last_status, last_error) VALUES (?, ?, 'failed', ?)
+		ON CONFLICT (repo, metric) DO UPDATE SET last_status='failed', last_error=excluded.last_error`, repo, metric, err.Error())
+	return e
+}
+
+func (s *Store) TrafficMetricState(repo, metric string) (TrafficMetricState, error) {
+	if !validTrafficMetric(metric) {
+		return TrafficMetricState{}, fmt.Errorf("unsupported traffic metric %q", metric)
+	}
+	st := TrafficMetricState{Repo: repo, Metric: metric, LastStatus: "never"}
+	err := s.db.QueryRow(`SELECT last_success_at, latest_observed_date, coverage_from, coverage_to, last_status, last_error FROM traffic_metric_state WHERE repo=? AND metric=?`, repo, metric).
+		Scan(&st.LastSuccessAt, &st.LatestObservedDate, &st.CoverageFrom, &st.CoverageTo, &st.LastStatus, &st.LastError)
+	if err == sql.ErrNoRows {
+		return st, nil
+	}
+	return st, err
+}
+
+// TrafficCoverageDates returns dates explicitly supplied by the current successful
+// response. It does not manufacture rows for absent dates.
+func (s *Store) TrafficCoverageDates(repo, metric, seenAt string) (map[string]bool, error) {
+	if !validTrafficMetric(metric) {
+		return nil, fmt.Errorf("unsupported traffic metric %q", metric)
+	}
+	rows, err := s.db.Query(`SELECT date FROM traffic_metric_coverage WHERE repo=? AND metric=? AND seen_at=?`, repo, metric, seenAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			return nil, err
+		}
+		out[d] = true
+	}
+	return out, rows.Err()
+}
+
+// TrafficCoverageBounds returns the first and last UTC dates explicitly present
+// in one GitHub traffic response. Empty responses have no observed span.
+func TrafficCoverageBounds(rows []DayRow) (from, to string) {
+	for _, row := range rows {
+		if from == "" || row.Date < from {
+			from = row.Date
+		}
+		if row.Date > to {
+			to = row.Date
+		}
+	}
+	return from, to
 }
 
 // UpsertReferrer inserts or replaces a referrer entry for a given date.
@@ -279,27 +462,10 @@ func (s *Store) UpsertPath(repo, date, path, title string, count, uniques int) e
 // UpsertRepo inserts or updates repo metadata.
 // parentFullName is the immediate upstream (e.g. "rust-lang/book"); empty if not a fork.
 func (s *Store) UpsertRepo(name, description string, stars, forks, watchers, issues, prs int, fork, archived bool, parentFullName string) error {
-	if !fork {
-		parentFullName = ""
-	}
-	_, err := s.db.Exec(
-		`INSERT INTO repos (name, description, stars, forks, watchers, issues, prs, fork, archived, parent_full_name, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-		 ON CONFLICT (name) DO UPDATE SET
-		   description=excluded.description,
-		   stars=MAX(repos.stars, excluded.stars),
-		   forks=MAX(repos.forks, excluded.forks),
-		   watchers=MAX(repos.watchers, excluded.watchers),
-		   issues=excluded.issues,
-		   prs=excluded.prs,
-		   fork=excluded.fork,
-		   archived=excluded.archived,
-		   parent_full_name=excluded.parent_full_name,
-		   hidden=0,
-		   updated_at=excluded.updated_at`,
-		name, description, stars, forks, watchers, issues, prs, boolToInt(fork), boolToInt(archived), parentFullName,
-	)
-	return err
+	// Kept for tests, demo data, and callers which construct only public
+	// repository metadata. GitHub collection always calls the visibility-aware
+	// variant below.
+	return s.UpsertRepoWithVisibility(name, description, stars, forks, watchers, issues, prs, fork, archived, parentFullName, VisibilityPublic)
 }
 
 // UpsertStar inserts or updates the cumulative star count for a repo on a date.

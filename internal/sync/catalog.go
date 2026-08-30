@@ -59,7 +59,7 @@ func syncFeaturedMeta(gh *github.Client, db *store.Store) error {
 	for _, f := range featured {
 		meta, err := gh.Repo(f.Name)
 		if err != nil {
-			slog.Warn("featured metadata failed", "repo", f.Name, "error", err)
+			slog.Warn("featured metadata failed")
 			continue
 		}
 		upstream := meta
@@ -68,7 +68,7 @@ func syncFeaturedMeta(gh *github.Client, db *store.Store) error {
 			parentName = meta.Parent.FullName
 			up, err := gh.Repo(parentName)
 			if err != nil {
-				slog.Warn("featured parent metadata failed", "repo", f.Name, "parent", parentName, "error", err)
+				slog.Warn("featured parent metadata failed")
 				upstream = meta
 			} else {
 				upstream = up
@@ -82,7 +82,7 @@ func syncFeaturedMeta(gh *github.Client, db *store.Store) error {
 			upstream.StargazersCount,
 			meta.Fork,
 		); err != nil {
-			slog.Warn("featured metadata upsert failed", "repo", f.Name, "error", err)
+			slog.Warn("featured metadata upsert failed")
 		}
 	}
 	return nil

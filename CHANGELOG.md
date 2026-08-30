@@ -7,6 +7,20 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-30
+
+### Changed
+
+- **Important for operators (fail-closed reporting):** after upgrading to **1.5.0**, existing SQLite rows migrate to `github_visibility=unknown` + `report_policy=inherit`. **Repositories stay hidden from the dashboard, APIs, exports, badges, and other report surfaces until the next sync** (startup sync when `GGHSTATS_SYNC_ON_STARTUP=true`, the scheduled interval, UI Sync, or `POST /api/v1/sync`). This is expected — **traffic history is not deleted**. After sync records `public`/`private` (or you run `gghstats repo report set OWNER/REPO include`), report-visible repos reappear. See [README — Upgrading to 1.5.0](README.md#upgrading-to-150) and [Report visibility](README.md#report-visibility).
+
+### Added
+
+- **Traffic freshness / coverage:** per-metric (`views` / `clones`) persisted fetch state and coverage bounds from the GitHub payload; statuses `fresh` / `delayed` / `missing` / `failed` / `never` on the repo page and traffic API; detail charts use `null` gaps for omitted days (explicit `0` stays confirmed zero); independent views/clones fetch. See `docs/plan-v1.5.0.md` (F-fresh).
+- **Report visibility:** `repos.github_visibility` + `repos.report_policy` with precedence `exclude > include > inherit`; `GGHSTATS_REPORT_PRIVATE`; CLI `gghstats repo report ls/set`; report surfaces fail closed (indistinguishable 404). Collection (`GGHSTATS_INCLUDE_PRIVATE` / filter / pins) stays separate from reporting. See `docs/plan-v1.5.0.md` (V-vis).
+- **Report inventory JSON (V-json):** `gghstats repo report ls --json` emits a JSON array of `{name,github_visibility,report_policy}`; optional `--visibility` / `--policy` filters for fail-closed post-upgrade scripting.
+- **Chart gap legend (U-legend):** repo detail traffic charts show a localized note that chart gaps mean GitHub omitted the day and `0` is confirmed zero traffic.
+- **Chart JSON download (X-chart):** repo page downloads chart-aligned clones/views JSON (`GET /{owner}/{repo}/traffic.json`); API dogfood via `GET …/traffic?dense=1` (or `download=1` for attachment). Default sparse traffic JSON unchanged. Download requires `x-api-token` only when `GGHSTATS_API_TOKEN` is set.
+
 ## [1.4.0] - 2026-08-29
 
 ### Added
@@ -604,7 +618,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/hrodrig/gghstats/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/hrodrig/gghstats/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/hrodrig/gghstats/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/hrodrig/gghstats/compare/v1.1.0...v1.2.0

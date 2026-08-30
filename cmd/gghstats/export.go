@@ -35,6 +35,11 @@ func runExport(args []string) error {
 		return err
 	}
 	defer db.Close()
+	if repo, err := db.ReportRepoByName(store.ReportVisibility{IncludePrivate: envBool("GGHSTATS_REPORT_PRIVATE", false)}, gf.Repo); err != nil {
+		return err
+	} else if repo == nil {
+		return fmt.Errorf("repository not found")
+	}
 
 	to := time.Now().UTC().Format("2006-01-02")
 	from := time.Now().UTC().AddDate(0, 0, -days).Format("2006-01-02")

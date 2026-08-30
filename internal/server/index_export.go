@@ -67,10 +67,11 @@ func buildIndexJSONLExportRows(db *store.Store, repos []store.RepoSummary) ([]in
 	return rows, nil
 }
 
-func handleIndexJSONLExport(db *store.Store) http.HandlerFunc {
+func handleIndexJSONLExport(cfg Config) http.HandlerFunc {
+	db := cfg.Store
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := strings.TrimSpace(r.URL.Query().Get("q"))
-		repos, err := loadFilteredIndexRepos(db, "total_clones", "desc", query)
+		repos, err := loadFilteredIndexRepos(db, cfg.ReportVisibility, "total_clones", "desc", query)
 		if err != nil {
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return

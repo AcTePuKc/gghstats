@@ -1,6 +1,6 @@
 # Spec — HTTP API and sync
 
-Normative operator contracts for **gghstats** as of **v1.4.0**.
+Normative operator contracts for **gghstats** as of **v1.5.0**.
 **Client how-to (examples, auth, dogfood map):** **[docs/api.md](docs/api.md)**.  
 Narrative install/env: **[README.md](README.md)**. Product direction: **[ROADMAP.md](ROADMAP.md)**.
 
@@ -19,7 +19,7 @@ This document describes **current** behavior. Changes that break clients must bu
 | Constraint | Rule |
 |------------|------|
 | Process | One `gghstats serve` (or CLI sync) per SQLite file |
-| Storage | SQLite (`GGHSTATS_DB`); WAL; pragmatic `synchronous=NORMAL` |
+| Storage | SQLite (`GGHSTATS_DB`); WAL; pragmatic `synchronous=NORMAL`; persisted traffic freshness/coverage and report visibility/policy |
 | Writers | At most **one sync cycle** at a time (`sync.Coordinator`) |
 | Auth to GitHub | Personal access token (`GGHSTATS_GITHUB_TOKEN`) only — no GitHub App / OAuth in-tree |
 | Demo | `--demo` / `GGHSTATS_DEMO=true`: sample data, no token, sync/update-check off |
@@ -36,7 +36,7 @@ This document describes **current** behavior. Changes that break clients must bu
 | `GET /api/v1/badge/{owner}/{repo}` | Public by default | SVG; optional `GGHSTATS_BADGE_PUBLIC=false` |
 | `GET /api/repos` | `x-api-token` | List + KPIs; optional `sort`/`dir`/`q`/`page`/`per_page` |
 | `GET /api/v1/repos/{owner}/{repo}` | `x-api-token` | Summary + momentum |
-| `GET /api/v1/repos/{owner}/{repo}/traffic` | `x-api-token` | Clones/views series |
+| `GET /api/v1/repos/{owner}/{repo}/traffic` | `x-api-token` | Clones/views series; `dense=1` / `download=1` chart-aligned |
 | `GET /api/v1/repos/{owner}/{repo}/stars` | `x-api-token` | Star history series |
 | `GET /api/v1/repos/{owner}/{repo}/popular` | `x-api-token` | Referrers + paths (~14d) |
 | `GET /api/v1/h2h` | `x-api-token` | Compare `a`/`b`/`w` + chart payload |
@@ -45,6 +45,7 @@ This document describes **current** behavior. Changes that break clients must bu
 | `GET` / `POST /api/v1/sync` | `x-api-token` | Sync coordinator |
 | `GET /metrics` | Public by default | Off with `GGHSTATS_METRICS=false` |
 | HTML UI (`/`, `/{owner}/{repo}`, `/h2h`, …) | Optional IP whitelist / rate limit | Omitted when `GGHSTATS_API_ONLY=true` |
+| `GET /{owner}/{repo}/traffic.json` | `x-api-token` only if `GGHSTATS_API_TOKEN` set | Chart-aligned download; report-scoped |
 | `/robots.txt`, `/sitemap.xml` | — | Omitted (404) when API-only |
 
 **Always exempt** from IP rate limit and IP whitelist: `/metrics`, `/api/v1/healthz`, `/api/v1/badge/*`, and each `local` prefix from `GGHSTATS_REVERSE_PROXY_RULES`.
@@ -85,6 +86,8 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 - Response: **200** `image/svg+xml` with `Cache-Control: public, max-age=…` (default 300s via `GGHSTATS_BADGE_CACHE_SECONDS`).
 - Query: `metric` ∈ `{clones, clones_30d, views, stars}` (default `clones`); `style` ∈ `{flat, flat-square}`; optional `label`.
 - Semantics: lifetime sums in SQLite for `clones` / `views`; rolling 30d UTC for `clones_30d`; latest synced stars for `stars`.
+- Report scope applies: an excluded or otherwise non-report-visible repository
+  returns **404**, identical to an unknown repository.
 
 ### 3.3 `GET /api/repos`
 
@@ -92,12 +95,20 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 - CORS per §2 (`GGHSTATS_CORS_ORIGINS` / `*`).
 - Query: `sort`, `dir`, `q` (name substring). Defaults without sort: **`total_views` / `desc`** (pre-0.11 compat). Pagination when `page` and/or `per_page` present; otherwise all matching items.
 - Body: `total_count`, KPI totals, `sort`, `dir`, `q`, `items[]`; when paginating also `page`, `per_page`, `total_pages`.
+- All items, totals, rankings, and the companion index chart are report-scoped;
+  excluded repositories do not contribute.
 
 ### 3.4 `GET /api/v1/repos/{owner}/{repo}/traffic`
 
 - Same auth gate as `/api/repos`.
 - Query `days`: UTC rolling window (default **30**); **0** = all stored days; max **3660**.
-- **200** JSON: `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`). Missing days omitted (not zero-filled).
+- **200** JSON (default, sparse): `name`, `days`, `from`, `to`, `clones[]`, `views[]` (`date`, `count`, `uniques`) plus `clones_freshness` / `views_freshness`. Each freshness object has `metric`, `status`, `fetched_at`, `latest_observed_day`, `latest_completed_utc_day`, `missing_completed_days`, and optional `error`. Sparse series omit unknown calendar days (not zero-filled).
+- Query `dense=1`: same window and freshness, but `clones[]` / `views[]` are chart-aligned — one object per UTC day in `[from,to]`, with `count`/`uniques` as numbers or **`null`** for unknown gaps; response includes `"dense": true`. Default sparse shape is unchanged when `dense` is absent.
+- Query `download=1`: forces dense payload and sets `Content-Disposition: attachment` with filename `gghstats-{owner}-{repo}-traffic-YYYYMMDD.json` (UTC).
+- `status` is one of `fresh`, `delayed`, `missing`, `failed`, or `never`. The completed day is UTC yesterday; current UTC day never counts as missing. A returned daily row with `count: 0` is an explicit zero. An omitted date (sparse) or `null` (dense/chart) is unknown and is not inferred as zero.
+- Each successful metric response establishes its coverage window from its actual earliest and latest returned UTC dates. A latest observed date before UTC yesterday is `delayed`; `missing` is reserved for an omitted date inside that observed span. This avoids treating not-yet-published or quiet omitted days as false missing-data warnings.
+- The repository detail chart uses the same aligned UTC calendar semantics as dense JSON. Both the sparse API and dense chart omit cached rows inside the latest GitHub coverage window when that response did not confirm them. The HTML repo page shows a localized legend clarifying gap vs confirmed zero (`repo.chart_gap_legend`) and a download control for `GET /{owner}/{repo}/traffic.json` (dense attachment; requires `x-api-token` only when `GGHSTATS_API_TOKEN` is set; always report-scoped).
+- Views and clones are independent: a failed endpoint retains successful sibling data and records metric failure/error state. The repo and sync run are not fully successful when either traffic metric fails.
 
 ### 3.5 `POST /api/v1/sync` and `GET /api/v1/sync`
 
@@ -109,28 +120,28 @@ With API-only + token + seeded store, an HTTP client must rebuild **index**, **r
 
 ### 3.6 `GET /api/v1/repos/{owner}/{repo}`
 
-- Same auth. **200**: `repo` (`RepoSummary`), `momentum_7d` / `momentum_30d` (float), `momentum_*_pct` (display strings). **404** if unknown.
+- Same auth. **200**: `repo` (`RepoSummary`), `momentum_7d` / `momentum_30d` (float), `momentum_*_pct` (display strings). **404** if unknown or not report-visible.
 
 ### 3.7 `GET /api/v1/repos/{owner}/{repo}/stars`
 
-- Same auth. **200**: `name`, `stars[]` (cumulative star history rows).
+- Same auth. **200**: `name`, `stars[]` (cumulative star history rows). **404** if not report-visible.
 
 ### 3.8 `GET /api/v1/repos/{owner}/{repo}/popular`
 
-- Same auth. **200**: `name`, `days` (14), `referrers[]`, `paths[]`.
+- Same auth. **200**: `name`, `days` (14), `referrers[]`, `paths[]`. **404** if not report-visible.
 
 ### 3.9 `GET /api/v1/h2h`
 
-- Same auth. Query: `a`, `b` (required `owner/repo`), `w` interval (`7d` default, `30d`, `total`).
+- Same auth. Query: `a`, `b` (required `owner/repo`), `w` interval (`7d` default, `30d`, `total`). Both repositories must be report-visible; otherwise **404**.
 - **200**: `a`, `b`, `interval`, `result` (`h2h.Result` with snake_case JSON: `repo_a`, `score_a`, `rows[]`, `suggest`, …), optional `charts` (aligned series). Examples: [docs/api.md](docs/api.md).
 
 ### 3.10 `GET /api/v1/charts/index-clones`
 
-- Same auth. Honors same `sort`/`dir`/`q` filter as `/api/repos` (no pagination). **200**: `count`, `series`, echo of filter fields.
+- Same auth. Honors same report scope and `sort`/`dir`/`q` filter as `/api/repos` (no pagination). **200**: `count`, `series`, echo of filter fields.
 
 ### 3.11 `GET /api/v1/featured`
 
-- Same auth. Dogfood for HTML `/featured` (showcase metadata only — **no** clones/views/paths).
+- Same auth. Dogfood for HTML `/featured` (showcase metadata only — **no** clones/views/paths). Only report-visible featured entries are counted or emitted.
 - Query (same as HTML): `sort` (`sort` default display order, `name`, `stars`), `dir` (`asc` default / `desc`), `q` (substring on `name` / `upstream_full_name`), `page` (default 1), `per_page` (default 25, max 100).
 - **200**: `total_count`, `items[]` (`store.Featured` JSON: `name`, `sort`, `upstream_full_name`, `upstream_description`, `upstream_stars`, `fork`, optional `parent_full_name`, `meta_updated_at`), plus echoed `sort`/`dir`/`q`/`page`/`per_page`/`total_pages`. Empty catalog → `items: []`, `total_count: 0`.
 
@@ -197,6 +208,37 @@ GitHub returns stargazer pages **newest-first**; gghstats always sorts ascending
 
 **Operator signal:** logs include `stargazers skipped` (`count_unchanged`) or `stargazers synced` with `mode=full|incremental`.
 
+### 4.8 Traffic freshness and report visibility persistence
+
+- Each successful views/clones response writes daily rows, its exact coverage
+  dates, last-success timestamp, latest observed date, and success state in one
+  SQLite transaction. Later GitHub revisions replace prior count/unique values
+  for the same date. A metric failure preserves its last successful coverage
+  and records `failed` plus its error.
+- Freshness/coverage is per repository **and** metric. Scheduler, manual API
+  sync, single-repository sync, and CLI `fetch` use the same independent
+  views/clones behavior.
+- `repos.github_visibility` is `public`, `private`, or `unknown`; unsupported
+  GitHub visibility values are stored as `unknown` (fail closed). Each repo also
+  has `report_policy`: `inherit`, `include`, or `exclude`.
+- Precedence: `exclude` always hides; `include` always shows; `inherit` shows
+  public repos and additionally private repos only with
+  `GGHSTATS_REPORT_PRIVATE=true`. Inherited unknown repos remain hidden.
+- Collection/storage (`GGHSTATS_INCLUDE_PRIVATE`, filter, pins, manual fetch)
+  is separate from report visibility. Changing a policy never deletes stored
+  history. **Public report surfaces** include HTML, reporting JSON, aggregate
+  queries/charts, exports, badges, metrics, sitemap, Featured, and H2H.
+  Direct excluded lookups return not-found without revealing existence.
+  **Operator alert evaluation** may include private/unknown/excluded repos
+  internally (operator’s own rules); privacy applies to public surfaces, not to
+  suppressing the operator’s configured alerts.
+- Migration v7 creates `traffic_metric_state` and `traffic_metric_coverage`.
+  Migration v8 adds persisted visibility/policy to `repos`. Old rows upgrade to
+  `unknown` + `inherit` and therefore remain hidden from all report surfaces
+  until the next sync refreshes metadata or an operator uses explicit include;
+  migrations do not delete historical data. Operator upgrade steps:
+  README “Upgrading to 1.5.0”.
+
 ---
 
 ## 5. CLI data ops (non-HTTP)
@@ -208,8 +250,14 @@ GitHub returns stargazer pages **newest-first**; gghstats always sorts ascending
 | `gghstats export --repo OWNER/REPO` | Write traffic CSV to stdout or `--output` (`--days`, default 14) |
 | `gghstats backup --output PATH` | Snapshot DB via SQLite `VACUUM INTO` |
 | `gghstats restore --input PATH` | Replace target DB by file copy; stop `serve` if the DB is open |
+| `gghstats repo report ls` | List stored repository, GitHub visibility, and report policy. Flags: `--json` (JSON array), `--visibility public\|private\|unknown`, `--policy inherit\|include\|exclude` |
+| `gghstats repo report set OWNER/REPO inherit\|include\|exclude` | Change report policy only; collection and SQLite history remain intact |
 
 Shared flags for fetch/report/export: `--repo` / `GGHSTATS_REPO`, `--token` / `GGHSTATS_GITHUB_TOKEN`, `--db` / `GGHSTATS_DB`.
+
+`gghstats report` and `gghstats export` are report-scoped using
+`GGHSTATS_REPORT_PRIVATE` (default false); they do not reveal excluded or
+inherited private/unknown repositories.
 
 ---
 
@@ -281,7 +329,7 @@ Comparison windows for **drops** (A2) must be named in config/docs:
 | Concept | Operator meaning | Example |
 |---------|------------------|---------|
 | **Absolute high** | Window value is **at or above** a fixed number. | Today `hrodrig/pgwd` **clones ≥ 225** |
-| **Absolute floor / zero** | Window value is **below** a bar, or **exactly 0** (no traffic). Missing day row → **0**. | Today `hrodrig/groot` **clones == 0** |
+| **Absolute floor / zero** | Window value is **below** a bar, or **exactly 0** (no traffic). For **alert** windows and rolling sums (`clones_7d` / `clones_30d` / H2H / momentum): missing day row → **0**. Detail **charts** and dense chart export use **`null`** gaps instead (never infer zero); see §3.4. | Today `hrodrig/groot` **clones == 0** |
 | **Relative drop %** | Current window is X% **below** the comparison window. | `clones` WoW drop ≥ **30%** |
 | **Scope** | One `owner/name`, each synced repo, or **aggregate** all synced repos (sum). | Only `hrodrig/pgwd`, or **fleet total** |
 | **Aggregate (fleet)** | Sum metric across **all repos in the DB** (document whether `GGHSTATS_FILTER` narrows). No single `repo` field. | All clones ever stored **≥ 30000** |

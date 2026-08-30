@@ -9,6 +9,54 @@ The dashboard **shows**; the CLI **stewards**. There is no browser admin UI.
 You manage pins and the showcase from the console — typically over SSH on the
 box that runs `gghstats serve`.
 
+## Report visibility and privacy boundary
+
+### After upgrading to 1.5.0
+
+Existing databases migrate every repository to `unknown` + `inherit`.
+**Report surfaces stay empty until the next sync** (startup, schedule, UI Sync,
+or `POST /api/v1/sync`). History in SQLite is retained; this is fail-closed by
+design, not data loss. Operator steps:
+[README — Upgrading to 1.5.0](../README.md#upgrading-to-150).
+
+Collection and reporting are deliberately separate. `GGHSTATS_FILTER`, pins,
+manual fetches, and `GGHSTATS_INCLUDE_PRIVATE=true` decide what gghstats may
+collect and retain in SQLite. They do **not** make a repository public in a
+report. GitHub metadata is persisted as one of `public`, `private`, or
+`unknown`, and each stored repository has a report policy:
+
+| Policy | Result |
+|---|---|
+| `exclude` | Always hidden. This wins over every other setting. |
+| `include` | Always report-visible, including private or still-unknown repositories. |
+| `inherit` | Visible only when GitHub visibility is `public`, or when it is `private` and `GGHSTATS_REPORT_PRIVATE=true`. Unknown is hidden. |
+
+`inherit` is the default. GitHub visibility values gghstats does not model are
+stored as `unknown` and fail closed. `GGHSTATS_REPORT_PRIVATE` defaults to
+`false`; it affects only inherited **private** repositories, never `unknown`
+ones and never collection.
+
+Use the report subcommands against the same SQLite file as `serve`:
+
+```bash
+gghstats repo report ls
+gghstats repo report set my-org/internal-tool exclude
+gghstats repo report set my-org/internal-tool include
+gghstats repo report set my-org/internal-tool inherit
+```
+
+`repo report ls` prints repository name, stored GitHub visibility, and report
+policy. `set` changes only report policy; it neither deletes history nor stops
+collection. Re-including a repository exposes its existing stored data without
+a new fetch.
+
+The server applies this boundary before rendering or serializing data. Excluded
+repositories do not contribute to dashboard totals/rankings or aggregate
+charts, reporting APIs, JSONL/CSV exports, badges, Prometheus per-repository
+gauges, sitemap, Featured, H2H, alert/report output, or HTML/embedded JSON.
+Direct HTML, API, traffic, stars, popular, and badge lookups behave as ordinary
+not-found responses, so they do not confirm that an excluded repository exists.
+
 ---
 
 ## The two catalogs, in one sentence
@@ -16,7 +64,7 @@ box that runs `gghstats serve`.
 | Catalog | CLI | What it does | Appears on `/`? |
 |---|---|---|---|
 | **Pins** | `gghstats repo` | Extends `GGHSTATS_FILTER` discovery with extra repos | **Yes** — row + traffic sync |
-| **Featured** | `gghstats featured` | Editorial showcase of repos worth highlighting | **No** — only on `/featured` |
+| **Featured** | `gghstats featured` | Editorial showcase of repos worth highlighting | **No** — only on `/featured`, when report-visible |
 
 They are two independent tables (`pins` and `featured`) in the same SQLite
 database. Adding to one never affects the other.
@@ -66,7 +114,12 @@ exceptions that matter:
 ## Featured — `gghstats featured`
 
 A **featured** entry curates a repository into the `/featured` showcase page —
-editorial "here's work worth looking at", independent of traffic tracking.
+editorial "here's work worth looking at", independent of traffic aggregation.
+The public page and `/api/v1/featured` still apply report visibility: a
+featured entry that is excluded, private without `GGHSTATS_REPORT_PRIVATE=true`,
+or unknown is not emitted. This avoids using a Featured catalog as a privacy
+bypass; collect/refresh its repository metadata or explicitly include a stored
+repository before expecting it to appear in a report.
 
 ```bash
 gghstats featured add hrodrig/awesome-readme    # showcase (idempotent)
@@ -111,8 +164,9 @@ card fills in.
 ### Nav hide-when-empty
 
 The sidebar link **Featured** (between **H2H** and the rest) only renders when
-the `featured` table has at least one row. An empty catalog keeps the default
-1.0.x chrome — no dead link, no empty page. This is regression R1.
+there is at least one **report-visible** featured entry. An empty catalog, or a
+catalog containing only excluded/hidden entries, keeps the default chrome — no
+dead link and no privacy signal.
 
 ---
 
@@ -154,7 +208,9 @@ curl -X POST http://127.0.0.1:8080/api/v1/sync   # if API token is set
 | `repo rm` / `featured rm` returns "not found" / "not pinned" | The row was never added, or you are pointing at a different DB (`--db`). |
 | `invalid repo name: expected OWNER/REPO` | You passed a filter expression, `*`, or a bare name. Use `owner/repo`. |
 | Featured card shows no stars / description | Metadata sync has not run yet (or sync is disabled in `--demo`). |
-| Added a repo but `/` or `/featured` does not change | CLI `--db` and `serve` DB differ, or `serve` was not restarted to pick up a schema change. |
+| Added a repo but `/` or `/featured` does not change | CLI `--db` and `serve` DB differ, the server has not refreshed metadata, or report visibility hides the repo. Check `gghstats repo report ls`. |
+| Dashboard empty right after upgrading to 1.5.0 | Expected fail-closed: rows are `unknown` until the next sync. Trigger sync, then `gghstats repo report ls`. See [Upgrading to 1.5.0](../README.md#upgrading-to-150). |
+| `repo report ls` shows many `unknown` after upgrade | Sync has not classified visibility yet (or GitHub metadata fetch failed). Re-run sync; use `--json --visibility unknown` to list leftovers. |
 
 ---
 

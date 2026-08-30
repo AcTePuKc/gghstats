@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -105,5 +107,76 @@ func TestCatalogDispatch(t *testing.T) {
 	}
 	if cliCommands["featured"] == nil {
 		t.Fatal("featured command not registered")
+	}
+}
+
+func TestRepoReportCLI(t *testing.T) {
+	s, path := openCatalogTestDB(t)
+	if err := s.UpsertRepoWithVisibility("owner/repo", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "owner/repo", store.ReportExclude}); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	s, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo, err := s.ReportRepoByName(store.ReportVisibility{}, "owner/repo"); err != nil || repo != nil {
+		t.Fatalf("excluded repo=%+v err=%v", repo, err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := runRepoReport([]string{"ls", "--db", path}); err != nil {
+		t.Fatalf("ls: %v", err)
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "owner/repo", "invalid"}); err == nil {
+		t.Fatal("expected invalid policy error")
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "missing/repo", store.ReportInclude}); err == nil {
+		t.Fatal("expected missing repository error")
+	}
+}
+
+func TestRepoReportLsJSONAndFilters(t *testing.T) {
+	s, path := openCatalogTestDB(t)
+	if err := s.UpsertRepoWithVisibility("owner/repo", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UpsertRepoWithVisibility("owner/hidden", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityUnknown); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.SetRepoReportPolicy("owner/repo", store.ReportExclude); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	var jsonOut strings.Builder
+	if err := runRepoReportLs([]string{"--db", path, "--json", "--policy", store.ReportExclude}, &jsonOut); err != nil {
+		t.Fatalf("ls --json: %v", err)
+	}
+	var rows []store.RepoReportState
+	if err := json.Unmarshal([]byte(jsonOut.String()), &rows); err != nil {
+		t.Fatalf("decode json: %v body=%s", err, jsonOut.String())
+	}
+	if len(rows) != 1 || rows[0].Name != "owner/repo" || rows[0].ReportPolicy != store.ReportExclude {
+		t.Fatalf("json filter=%+v", rows)
+	}
+
+	var unknownOut strings.Builder
+	if err := runRepoReportLs([]string{"--db", path, "--visibility", store.VisibilityUnknown}, &unknownOut); err != nil {
+		t.Fatalf("ls --visibility: %v", err)
+	}
+	if !strings.Contains(unknownOut.String(), "owner/hidden") || strings.Contains(unknownOut.String(), "owner/repo") {
+		t.Fatalf("visibility filter output=%q", unknownOut.String())
+	}
+	if err := runRepoReportLs([]string{"--db", path, "--visibility", "nope"}, io.Discard); err == nil {
+		t.Fatal("expected invalid visibility")
 	}
 }

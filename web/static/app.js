@@ -907,6 +907,61 @@ function initSyncControl() {
   refreshStatus();
 }
 
+function filenameFromContentDisposition(header, fallback) {
+  if (!header) return fallback;
+  const m = /filename="([^"]+)"/i.exec(header);
+  return m ? m[1] : fallback;
+}
+
+function initTrafficJSONDownload() {
+  const link = document.querySelector('[data-gghstats-role="traffic-json-download"]');
+  if (!link) return;
+  const url = link.getAttribute('data-traffic-json-url') || link.getAttribute('href');
+  if (!url) return;
+  const requiresToken = link.getAttribute('data-requires-api-token') === '1';
+
+  link.addEventListener('click', async (ev) => {
+    if (!requiresToken) return; // plain navigation / browser download
+    ev.preventDefault();
+    let token = syncApiToken();
+    if (!token) {
+      token = await requestSyncTokenModal();
+      if (!token) return;
+      sessionStorage.setItem(SYNC_TOKEN_KEY, token);
+    }
+    const tryDownload = async (tok) => {
+      const res = await fetch(url, { headers: { 'x-api-token': tok } });
+      if (res.status === 401) {
+        sessionStorage.removeItem(SYNC_TOKEN_KEY);
+        const retry = await requestSyncTokenModal({ invalid: true });
+        if (!retry) return;
+        sessionStorage.setItem(SYNC_TOKEN_KEY, retry);
+        await tryDownload(retry);
+        return;
+      }
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const name = filenameFromContentDisposition(
+        res.headers.get('Content-Disposition'),
+        'gghstats-traffic.json'
+      );
+      const objectURL = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectURL;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectURL);
+    };
+    try {
+      await tryDownload(token);
+    } catch {
+      /* ignore network errors for download */
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle();
   initRepoCharts();
@@ -915,6 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initH2HCharts();
   initBadgeEmbed();
   initSyncControl();
+  initTrafficJSONDownload();
 });
 
 function renderMetrics(canvasId, data, uniqueCol, countCol, chartLabel) {
@@ -939,7 +995,9 @@ function renderMetrics(canvasId, data, uniqueCol, countCol, chartLabel) {
           data: data.map(d => d[countCol]),
           backgroundColor: c.info,
           borderWidth: 0,
-          borderRadius: 4
+          borderRadius: 4,
+          // JSON null denotes an unreported/unknown UTC day; Chart.js leaves a gap.
+          spanGaps: false
         }
       ]
     },

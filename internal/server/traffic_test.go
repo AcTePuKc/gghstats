@@ -2,10 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hrodrig/gghstats/internal/store"
 )
 
 func TestAPIRepoTrafficUnauthorized(t *testing.T) {
@@ -187,5 +190,180 @@ func TestAPIRepoTrafficAllTime(t *testing.T) {
 	}
 	if len(resp.Clones) != 1 || len(resp.Views) != 1 {
 		t.Fatalf("clones=%d views=%d", len(resp.Clones), len(resp.Views))
+	}
+}
+
+func TestAPIRepoTrafficOmitsCachedRowOutsideLatestCoverage(t *testing.T) {
+	db := testStore(t)
+	db.UpsertRepo("a/b", "", 0, 0, 0, 0, 0, false, false, "")
+	// An earlier revision exists for the 26th, but the latest response only
+	// confirms 25th and 27th, making 26th unknown to both API and chart.
+	if err := db.UpsertView("a/b", "2026-08-26", 9, 4); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if err := db.RecordTrafficMetricSuccess("a/b", "views", []store.DayRow{{Date: "2026-08-25", Count: 0, Uniques: 0}, {Date: "2026-08-27", Count: 3, Uniques: 1}}, now, "2026-08-25", "2026-08-27"); err != nil {
+		t.Fatal(err)
+	}
+	handler := New(Config{Store: db, APIToken: "secret"})
+	req := httptest.NewRequest("GET", "/api/v1/repos/a/b/traffic?days=0", nil)
+	req.Header.Set("x-api-token", "secret")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp repoTrafficResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Views) != 2 || resp.Views[0].Date != "2026-08-25" || resp.Views[0].Count != 0 || resp.Views[1].Date != "2026-08-27" {
+		t.Fatalf("sparse views=%+v", resp.Views)
+	}
+	rows, err := db.ViewsByRange("a/b", "2026-08-25", "2026-08-27")
+	if err != nil {
+		t.Fatal(err)
+	}
+	chart, err := denseTrafficChartWithCoverage(db, "a/b", "views", "2026-08-25", "2026-08-27", rows)
+	if err != nil || chart[1].Count != nil {
+		t.Fatalf("dense chart=%+v err=%v", chart, err)
+	}
+}
+
+func TestAPIRepoTrafficDenseFillsCalendarGaps(t *testing.T) {
+	db := testStore(t)
+	db.UpsertRepo("a/b", "", 0, 0, 0, 0, 0, false, false, "")
+	today := time.Now().UTC().Format("2006-01-02")
+	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	db.UpsertClone("a/b", yesterday, 5, 2)
+	db.UpsertClone("a/b", today, 12, 4)
+
+	handler := New(Config{Store: db, APIToken: "secret"})
+	req := httptest.NewRequest("GET", "/api/v1/repos/a/b/traffic?days=3&dense=1", nil)
+	req.Header.Set("x-api-token", "secret")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp repoTrafficDenseResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Dense || len(resp.Clones) != 3 {
+		t.Fatalf("dense=%v clones=%d, want 3", resp.Dense, len(resp.Clones))
+	}
+	// Oldest day in a 3-day window has no row → null count/uniques.
+	if resp.Clones[0].Count != nil || resp.Clones[0].Uniques != nil {
+		t.Fatalf("gap day should be null: %+v", resp.Clones[0])
+	}
+	if resp.Clones[1].Count == nil || *resp.Clones[1].Count != 5 {
+		t.Fatalf("yesterday = %+v, want count 5", resp.Clones[1])
+	}
+	if resp.Clones[2].Count == nil || *resp.Clones[2].Count != 12 {
+		t.Fatalf("today = %+v, want count 12", resp.Clones[2])
+	}
+}
+
+func TestAPIRepoTrafficDownloadImpliesDenseAndDisposition(t *testing.T) {
+	db := testStore(t)
+	db.UpsertRepo("owner/repo", "", 0, 0, 0, 0, 0, false, false, "")
+	handler := New(Config{Store: db, APIToken: "secret"})
+	req := httptest.NewRequest("GET", "/api/v1/repos/owner/repo/traffic?days=2&download=1", nil)
+	req.Header.Set("x-api-token", "secret")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("status=%d", w.Code)
+	}
+	cd := w.Header().Get("Content-Disposition")
+	wantName := trafficJSONFilename("owner/repo", time.Now().UTC())
+	if !strings.Contains(cd, wantName) {
+		t.Fatalf("Content-Disposition=%q, want filename %q", cd, wantName)
+	}
+	var resp repoTrafficDenseResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Dense || len(resp.Clones) != 2 {
+		t.Fatalf("dense=%v len=%d", resp.Dense, len(resp.Clones))
+	}
+}
+
+func TestRepoTrafficJSONExportPublicWithoutAPIToken(t *testing.T) {
+	db := testStore(t)
+	db.UpsertRepo("a/b", "", 0, 0, 0, 0, 0, false, false, "")
+	handler := New(Config{Store: db, APIToken: ""})
+	req := httptest.NewRequest("GET", "/a/b/traffic.json?days=2", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	cd := w.Header().Get("Content-Disposition")
+	if !strings.Contains(cd, trafficJSONFilename("a/b", time.Now().UTC())) {
+		t.Fatalf("Content-Disposition=%q", cd)
+	}
+	var resp repoTrafficDenseResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Dense || resp.Name != "a/b" {
+		t.Fatalf("resp=%+v", resp)
+	}
+}
+
+func TestRepoTrafficJSONExportRequiresTokenWhenConfigured(t *testing.T) {
+	db := testStore(t)
+	db.UpsertRepo("a/b", "", 0, 0, 0, 0, 0, false, false, "")
+	handler := New(Config{Store: db, APIToken: "secret"})
+
+	req := httptest.NewRequest("GET", "/a/b/traffic.json", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("no token: status=%d, want 401", w.Code)
+	}
+
+	req = httptest.NewRequest("GET", "/a/b/traffic.json", nil)
+	req.Header.Set("x-api-token", "wrong")
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("bad token: status=%d, want 401", w.Code)
+	}
+
+	req = httptest.NewRequest("GET", "/a/b/traffic.json?days=1", nil)
+	req.Header.Set("x-api-token", "secret")
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("good token: status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestRepoTrafficJSONExportExcludedIs404(t *testing.T) {
+	db := testStore(t)
+	if err := db.UpsertRepoWithVisibility("secret/nope", "hidden", 1, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	setTestReportPolicy(t, db, "secret/nope", store.ReportExclude)
+	handler := New(Config{Store: db, APIToken: ""})
+	req := httptest.NewRequest("GET", "/secret/nope/traffic.json", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status=%d, want 404", w.Code)
+	}
+	if strings.Contains(w.Body.String(), "secret/nope") {
+		t.Fatalf("leaked name: %s", w.Body.String())
+	}
+}
+
+func TestTrafficJSONFilename(t *testing.T) {
+	got := trafficJSONFilename("hrodrig/gghstats", time.Date(2026, 8, 30, 12, 0, 0, 0, time.UTC))
+	want := "gghstats-hrodrig-gghstats-traffic-20260830.json"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
 	}
 }

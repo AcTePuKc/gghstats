@@ -133,6 +133,9 @@ func TestRunCLIHelp(t *testing.T) {
 	if !strings.Contains(out.String(), "gghstats") {
 		t.Fatalf("expected usage text, got %q", out.String())
 	}
+	if !strings.Contains(out.String(), "GGHSTATS_REPORT_PRIVATE") {
+		t.Fatalf("expected report visibility environment help, got %q", out.String())
+	}
 }
 
 func TestRunCLIVersion(t *testing.T) {

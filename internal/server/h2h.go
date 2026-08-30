@@ -54,7 +54,7 @@ func handleH2HPage(cfg Config, db *store.Store, tmpl *template.Template) http.Ha
 		bundle := i18n.MustLoad()
 		loc := lb.Locale
 
-		repos, err := db.ListRepos("name", "asc")
+		repos, err := db.ListReportRepos(cfg.ReportVisibility, "name", "asc")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -65,9 +65,13 @@ func handleH2HPage(cfg Config, db *store.Store, tmpl *template.Template) http.Ha
 		interval := h2h.ParseInterval(r.URL.Query().Get("w"))
 		data := newH2HPageData(lb, repos, rawA, rawB, interval)
 
-		if err := applyH2HComparison(&data, bundle, loc, db, rawA, rawB, interval); err != nil {
+		if err := applyH2HComparison(&data, bundle, loc, db, cfg.ReportVisibility, rawA, rawB, interval); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+		if data.Error != "" {
+			// Do not retain rejected comparison names in canonical/meta payloads.
+			r.URL.RawQuery = ""
 		}
 
 		content := executeTemplate(tmpl, "h2h", data)
@@ -114,7 +118,7 @@ func newH2HPageData(lb localeBinder, repos []store.RepoSummary, rawA, rawB strin
 }
 
 // applyH2HComparison fills comparison fields when query params request a pair. Returns an error for load failures.
-func applyH2HComparison(data *h2hPageData, bundle *i18n.Bundle, locale string, db *store.Store, rawA, rawB string, interval h2h.Interval) error {
+func applyH2HComparison(data *h2hPageData, bundle *i18n.Bundle, locale string, db *store.Store, scope store.ReportVisibility, rawA, rawB string, interval h2h.Interval) error {
 	if rawA == "" && rawB == "" {
 		return nil
 	}
@@ -126,6 +130,20 @@ func applyH2HComparison(data *h2hPageData, bundle *i18n.Bundle, locale string, d
 	}
 	if repoA == repoB {
 		data.Error = bundle.H2HError(locale, "same")
+		return nil
+	}
+	visibleA, err := db.ReportRepoByName(scope, repoA)
+	if err != nil {
+		return err
+	}
+	visibleB, err := db.ReportRepoByName(scope, repoB)
+	if err != nil {
+		return err
+	}
+	if visibleA == nil || visibleB == nil {
+		data.RepoA = ""
+		data.RepoB = ""
+		data.Error = bundle.H2HError(locale, "not_found")
 		return nil
 	}
 	return populateH2HComparison(data, bundle, locale, db, repoA, repoB, interval)
