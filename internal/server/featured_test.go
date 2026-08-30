@@ -6,7 +6,16 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/hrodrig/gghstats/internal/store"
 )
+
+func makeFeaturedReportable(t *testing.T, db *store.Store, name string) {
+	t.Helper()
+	if err := db.UpsertRepoWithVisibility(name, "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // R1: empty catalog → GET / has no href="/featured".
 func TestFeaturedNavHiddenWhenEmpty(t *testing.T) {
@@ -40,6 +49,7 @@ func TestFeaturedNavToggle(t *testing.T) {
 	if err := db.AddFeatured("hrodrig/awesome-readme"); err != nil {
 		t.Fatal(err)
 	}
+	makeFeaturedReportable(t, db, "hrodrig/awesome-readme")
 	h := New(Config{Store: db})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -68,6 +78,7 @@ func TestFeaturedPageShell(t *testing.T) {
 	if err := db.AddFeatured("hrodrig/awesome-readme"); err != nil {
 		t.Fatal(err)
 	}
+	makeFeaturedReportable(t, db, "hrodrig/awesome-readme")
 	if err := db.UpsertFeaturedMeta(
 		"hrodrig/awesome-readme",
 		"matiassingers/awesome-readme",
@@ -124,6 +135,7 @@ func TestFeaturedPageCompactNumbers(t *testing.T) {
 	if err := db.AddFeatured("hrodrig/awesome-readme"); err != nil {
 		t.Fatal(err)
 	}
+	makeFeaturedReportable(t, db, "hrodrig/awesome-readme")
 	if err := db.UpsertFeaturedMeta(
 		"hrodrig/awesome-readme",
 		"matiassingers/awesome-readme",
@@ -159,6 +171,7 @@ func TestFeaturedPagePagination(t *testing.T) {
 		if err := db.AddFeatured(name); err != nil {
 			t.Fatal(err)
 		}
+		makeFeaturedReportable(t, db, name)
 		if err := db.UpsertFeaturedMeta(name, "", name, "desc", i, false); err != nil {
 			t.Fatal(err)
 		}

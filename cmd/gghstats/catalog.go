@@ -31,7 +31,62 @@ func validCatalogName(raw string) (string, error) {
 }
 
 // runRepo is the "gghstats repo" command family.
-func runRepo(args []string) error { return runCatalog("repo", "", args) }
+func runRepo(args []string) error {
+	if len(args) > 0 && args[0] == "report" {
+		return runRepoReport(args[1:])
+	}
+	return runCatalog("repo", "", args)
+}
+
+// runRepoReport is the supported operator interface for changing the reporting
+// boundary; it never changes collection or deletes stored data.
+func runRepoReport(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("repo report: expected ls|set")
+	}
+	_, dbPath, rest, err := catalogFlagSet("repo report", args[1:])
+	if err != nil {
+		return err
+	}
+	db, err := store.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	switch args[0] {
+	case "ls":
+		if len(rest) != 0 {
+			return fmt.Errorf("repo report ls: unexpected argument")
+		}
+		states, err := db.ListRepoReportStates()
+		if err != nil {
+			return err
+		}
+		for _, state := range states {
+			fmt.Printf("%s\t%s\t%s\n", state.Name, state.GitHubVisibility, state.ReportPolicy)
+		}
+		return nil
+	case "set":
+		if len(rest) != 2 {
+			return fmt.Errorf("repo report set: expected OWNER/REPO inherit|include|exclude")
+		}
+		name, err := validCatalogName(rest[0])
+		if err != nil {
+			return err
+		}
+		ok, err := db.SetRepoReportPolicy(name, rest[1])
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("repository not found")
+		}
+		fmt.Printf("report policy for %s set to %s\n", name, rest[1])
+		return nil
+	default:
+		return fmt.Errorf("repo report: unknown subcommand %q (ls|set)", args[0])
+	}
+}
 
 // runFeatured is the "gghstats featured" command family.
 func runFeatured(args []string) error { return runCatalog("featured", "", args) }
@@ -58,6 +113,14 @@ func runCatalog(kind, sub string, args []string) error {
 }
 
 func catalogUsage(kind string) string {
+	if kind == "repo" {
+		return `gghstats repo <add|rm|ls|report> [flags]
+
+  gghstats repo report ls
+  gghstats repo report set OWNER/REPO inherit|include|exclude
+
+Report policy affects reporting only; collection and SQLite storage continue.`
+	}
 	return fmt.Sprintf(`gghstats %s <add|rm|ls> [flags]
 
   %s add OWNER/REPO   Pin/showcase a repo (idempotent)

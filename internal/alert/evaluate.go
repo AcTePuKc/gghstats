@@ -14,11 +14,12 @@ import (
 
 // EvalConfig controls post-sync traffic rule evaluation.
 type EvalConfig struct {
-	DB        *store.Store
-	Rules     []RuleSpec
-	Senders   []Sender
-	PublicURL string
-	Now       time.Time // zero = time.Now().UTC()
+	DB               *store.Store
+	Rules            []RuleSpec
+	Senders          []Sender
+	PublicURL        string
+	ReportVisibility store.ReportVisibility
+	Now              time.Time // zero = time.Now().UTC()
 }
 
 // RunTrafficRules evaluates traffic rules and fans out matching alerts (SPEC §8.2 / §8.4).
@@ -40,7 +41,7 @@ func RunTrafficRules(ctx context.Context, cfg EvalConfig) {
 		if rule.Kind == KindOps {
 			continue
 		}
-		payloads, err := evaluateTrafficRule(cfg.DB, rule, now, today, cfg.PublicURL)
+		payloads, err := evaluateTrafficRuleScoped(cfg.DB, cfg.ReportVisibility, rule, now, today, cfg.PublicURL)
 		if err != nil {
 			slog.Error("alert: evaluate rule", "error", err, "repo", rule.Repo, "metric", rule.Metric)
 			continue
@@ -97,21 +98,25 @@ func markFired(db *store.Store, key, mode, today string) error {
 }
 
 func evaluateTrafficRule(db *store.Store, rule RuleSpec, now time.Time, today, publicURL string) ([]Payload, error) {
+	return evaluateTrafficRuleScoped(db, store.ReportVisibility{IncludePrivate: true}, rule, now, today, publicURL)
+}
+
+func evaluateTrafficRuleScoped(db *store.Store, scope store.ReportVisibility, rule RuleSpec, now time.Time, today, publicURL string) ([]Payload, error) {
 	switch rule.Scope {
 	case "all_repos":
-		p, fire, err := evalOne(db, rule, "", now, today, publicURL)
+		p, fire, err := evalOneScoped(db, scope, rule, "", now, today, publicURL)
 		if err != nil || !fire {
 			return nil, err
 		}
 		return []Payload{p}, nil
 	case "each_repo":
-		repos, err := db.ListRepos("name", "asc")
+		repos, err := db.ListReportRepos(scope, "name", "asc")
 		if err != nil {
 			return nil, err
 		}
 		var out []Payload
 		for _, rs := range repos {
-			p, fire, err := evalOne(db, rule, rs.Name, now, today, publicURL)
+			p, fire, err := evalOneScoped(db, scope, rule, rs.Name, now, today, publicURL)
 			if err != nil {
 				return nil, err
 			}
@@ -124,7 +129,14 @@ func evaluateTrafficRule(db *store.Store, rule RuleSpec, now time.Time, today, p
 		if rule.Repo == "" {
 			return nil, fmt.Errorf("repo required when scope unset")
 		}
-		p, fire, err := evalOne(db, rule, rule.Repo, now, today, publicURL)
+		visible, err := db.ReportRepoByName(scope, rule.Repo)
+		if err != nil {
+			return nil, err
+		}
+		if visible == nil {
+			return nil, nil
+		}
+		p, fire, err := evalOneScoped(db, scope, rule, rule.Repo, now, today, publicURL)
 		if err != nil || !fire {
 			return nil, err
 		}
@@ -133,7 +145,11 @@ func evaluateTrafficRule(db *store.Store, rule RuleSpec, now time.Time, today, p
 }
 
 func evalOne(db *store.Store, rule RuleSpec, repo string, now time.Time, today, publicURL string) (Payload, bool, error) {
-	value, detail, err := metricValue(db, rule, repo, now, today)
+	return evalOneScoped(db, store.ReportVisibility{IncludePrivate: true}, rule, repo, now, today, publicURL)
+}
+
+func evalOneScoped(db *store.Store, scope store.ReportVisibility, rule RuleSpec, repo string, now time.Time, today, publicURL string) (Payload, bool, error) {
+	value, detail, err := metricValueScoped(db, scope, rule, repo, now, today)
 	if err != nil {
 		return Payload{}, false, err
 	}
@@ -167,11 +183,15 @@ func evalOne(db *store.Store, rule RuleSpec, repo string, now time.Time, today, 
 }
 
 func metricValue(db *store.Store, rule RuleSpec, repo string, now time.Time, today string) (float64, string, error) {
+	return metricValueScoped(db, store.ReportVisibility{IncludePrivate: true}, rule, repo, now, today)
+}
+
+func metricValueScoped(db *store.Store, scope store.ReportVisibility, rule RuleSpec, repo string, now time.Time, today string) (float64, string, error) {
 	metric := rule.Metric
 	window := rule.Window
 
 	if rule.Scope == "all_repos" && window == "lifetime" {
-		return lifetimeAllRepos(db, metric)
+		return lifetimeAllReposScoped(db, scope, metric)
 	}
 	if repo == "" && rule.Scope != "all_repos" {
 		return 0, "", fmt.Errorf("repo required")
@@ -200,12 +220,16 @@ func metricValue(db *store.Store, rule RuleSpec, repo string, now time.Time, tod
 }
 
 func lifetimeAllRepos(db *store.Store, metric string) (float64, string, error) {
+	return lifetimeAllReposScoped(db, store.ReportVisibility{IncludePrivate: true}, metric)
+}
+
+func lifetimeAllReposScoped(db *store.Store, scope store.ReportVisibility, metric string) (float64, string, error) {
 	switch metric {
 	case "clones":
-		n, err := db.SumClonesAll()
+		n, err := db.SumReportClonesAll(scope)
 		return float64(n), "", err
 	case "views":
-		n, err := db.SumViewsAll()
+		n, err := db.SumReportViewsAll(scope)
 		return float64(n), "", err
 	default:
 		return 0, "", fmt.Errorf("lifetime all_repos unsupported metric %q", metric)

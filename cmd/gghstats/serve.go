@@ -35,6 +35,7 @@ type serveConfig struct {
 	Port              string
 	Filter            string
 	IncludePrivate    bool
+	ReportPrivate     bool
 	APIToken          string
 	SyncInterval      time.Duration
 	SyncOnStartup     bool
@@ -62,6 +63,7 @@ func loadServeConfig() serveConfig {
 		Port:             envOr("GGHSTATS_PORT", "8080"),
 		Filter:           envOr("GGHSTATS_FILTER", "*"),
 		IncludePrivate:   envBool("GGHSTATS_INCLUDE_PRIVATE", false),
+		ReportPrivate:    envBool("GGHSTATS_REPORT_PRIVATE", false),
 		APIToken:         os.Getenv("GGHSTATS_API_TOKEN"),
 		SyncInterval:     1 * time.Hour,
 		SyncOnStartup:    envBool("GGHSTATS_SYNC_ON_STARTUP", true),
@@ -240,20 +242,18 @@ func runServe(args []string) error {
 	}
 	defer db.Close()
 
-	if cfg.Demo {
-		if err := demo.SeedIfEmpty(db); err != nil {
-			return fmt.Errorf("demo seed: %w", err)
-		}
+	if err := seedDemoIfEnabled(db, cfg.Demo); err != nil {
+		return err
 	}
 
 	var metricsReg *prometheus.Registry
 	var domainMetrics *metrics.Domain
 	if envBool("GGHSTATS_METRICS", true) {
 		metricsReg, domainMetrics = server.NewMetricsRegistry(server.MetricsRegistryConfig{
-			Store:          db,
-			DBPath:         cfg.DB,
-			Filter:         cfg.Filter,
-			PerRepoEnabled: envBool("GGHSTATS_METRICS_PER_REPO", false),
+			Store:            db,
+			DBPath:           cfg.DB,
+			PerRepoEnabled:   envBool("GGHSTATS_METRICS_PER_REPO", false),
+			ReportVisibility: store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
 		})
 	}
 
@@ -298,19 +298,24 @@ func runServe(args []string) error {
 			rules := alertRules
 			publicURL := cfg.PublicURL
 			coord.SetAfterSync(func(result sync.RunResult) {
+				reportScope := store.ReportVisibility{IncludePrivate: cfg.ReportPrivate}
+				failed := reportableFailedRepos(db, reportScope, result.FailedRepos)
+				attempted, _ := db.ReportRepoCount(reportScope)
 				snap := alert.SyncSnapshot{
-					Success:            result.Success,
-					ReposAttempted:     result.ReposAttempted,
-					ReposFailed:        result.ReposFailed,
-					FailedRepos:        result.FailedRepos,
+					// Report alerts must not disclose failures from excluded collection.
+					Success:            result.Success || len(failed) == 0,
+					ReposAttempted:     attempted,
+					ReposFailed:        len(failed),
+					FailedRepos:        failed,
 					Unreachable:        result.Unreachable,
 					RateLimitRemaining: result.RateLimitRemaining,
 				}
 				alert.RunAllRules(ctx, alert.EvalConfig{
-					DB:        db,
-					Rules:     rules,
-					Senders:   senders,
-					PublicURL: publicURL,
+					DB:               db,
+					ReportVisibility: store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
+					Rules:            rules,
+					Senders:          senders,
+					PublicURL:        publicURL,
 				}, snap)
 			})
 			slog.Info(fmt.Sprintf("alerts: %d rule(s) will evaluate after sync", len(rules)))
@@ -323,6 +328,7 @@ func runServe(args []string) error {
 	// Start HTTP server
 	handler := server.New(server.Config{
 		Store:             db,
+		ReportVisibility:  store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
 		APIToken:          cfg.APIToken,
 		SyncCoordinator:   coord,
 		BadgePublic:       cfg.BadgePublic,
@@ -359,6 +365,27 @@ func runServe(args []string) error {
 	}
 
 	return serveHTTP(ctx, srv, cfg, cancel)
+}
+
+func seedDemoIfEnabled(db *store.Store, enabled bool) error {
+	if !enabled {
+		return nil
+	}
+	if err := demo.SeedIfEmpty(db); err != nil {
+		return fmt.Errorf("demo seed: %w", err)
+	}
+	return nil
+}
+
+func reportableFailedRepos(db *store.Store, scope store.ReportVisibility, names []string) []string {
+	visible := make([]string, 0, len(names))
+	for _, name := range names {
+		repo, err := db.ReportRepoByName(scope, name)
+		if err == nil && repo != nil {
+			visible = append(visible, name)
+		}
+	}
+	return visible
 }
 
 // serveHTTP listens until ctx is cancelled or ListenAndServe fails.

@@ -27,7 +27,7 @@ func RunMilestoneRules(ctx context.Context, cfg EvalConfig) {
 		if !rule.isMilestone() {
 			continue
 		}
-		crossings, err := crossedMilestones(cfg.DB, rule)
+		crossings, err := crossedMilestonesScoped(cfg.DB, cfg.ReportVisibility, rule)
 		if err != nil {
 			slog.Error("alert: evaluate milestone", "error", err, "repo", rule.Repo)
 			continue
@@ -56,7 +56,11 @@ func RunMilestoneRules(ctx context.Context, cfg EvalConfig) {
 
 // crossedMilestones returns thresholds already reached by current repos.stars, ascending.
 func crossedMilestones(db *store.Store, rule RuleSpec) ([]int, error) {
-	sum, err := db.RepoByName(rule.Repo)
+	return crossedMilestonesScoped(db, store.ReportVisibility{IncludePrivate: true}, rule)
+}
+
+func crossedMilestonesScoped(db *store.Store, scope store.ReportVisibility, rule RuleSpec) ([]int, error) {
+	sum, err := db.ReportRepoByName(scope, rule.Repo)
 	if err != nil {
 		return nil, err
 	}

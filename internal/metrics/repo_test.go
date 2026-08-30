@@ -22,7 +22,6 @@ func TestSplitRepo(t *testing.T) {
 func TestRefreshPerRepoGauges(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	d := RegisterDomain(reg, DomainConfig{
-		Filter:         "*",
 		PerRepoEnabled: true,
 		ListRepos: func() ([]store.RepoSummary, error) {
 			return []store.RepoSummary{

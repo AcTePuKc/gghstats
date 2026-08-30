@@ -32,9 +32,12 @@ const indexCloneChartMaxDays = 120
 
 // Config holds server configuration.
 type Config struct {
-	Store          *store.Store
-	APIToken       string // if empty, API is disabled
-	DisableMetrics bool   // if true, omit /metrics and Prometheus HTTP metrics (see GGHSTATS_METRICS)
+	Store *store.Store
+	// ReportVisibility is the server-side reporting boundary. Collection and
+	// local storage are intentionally not affected by it.
+	ReportVisibility store.ReportVisibility
+	APIToken         string // if empty, API is disabled
+	DisableMetrics   bool   // if true, omit /metrics and Prometheus HTTP metrics (see GGHSTATS_METRICS)
 	// BadgePublic: when true (default), GET /api/v1/badge/* needs no auth (for README img embeds).
 	BadgePublic bool
 	// BadgeCacheMaxAge is Cache-Control max-age in seconds for badge SVG (default 300).
@@ -195,7 +198,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	mountSEORoutes(mux, cfg)
 	repoHandler := handleRepoPage(cfg, cfg.Store, tmpl)
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
-	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg.Store))
+	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg))
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
 	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
 	htmlNotFound := func(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +268,9 @@ func logMiddleware(trusted *TrustedProxies, next http.Handler) http.Handler {
 		if r.URL.Path != HealthzPath {
 			attrs := []any{
 				"method", r.Method,
-				"path", r.URL.Path,
+				// Use a normalized route so request logs never become another
+				// reporting surface for repository names (including excluded ones).
+				"path", metricsRouteLabel(r),
 				"status", rec.status,
 				"ip", clientIP(r, trusted),
 				"dur", time.Since(start).Round(time.Millisecond),
@@ -312,7 +317,7 @@ func handleAPIRepos(cfg Config) http.HandlerFunc {
 	db := cfg.Store
 	return func(w http.ResponseWriter, r *http.Request) {
 		sort, dir, query, page, perPage, paginate := parseAPIReposQuery(r)
-		repos, err := loadFilteredIndexRepos(db, sort, dir, query)
+		repos, err := loadFilteredIndexRepos(db, cfg.ReportVisibility, sort, dir, query)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
@@ -501,7 +506,10 @@ func buildIndexListClonesChartPayload(db *store.Store, repoNames []string, local
 	if len(rows) == 0 {
 		return 0, js, nil, nil, nil
 	}
-	b, err := json.Marshal(rows)
+	// Preserve calendar gaps for the index chart too. An absent aggregate row is
+	// unknown/null, not a synthetic zero (partial per-repo coverage remains a
+	// documented limitation of this fleet aggregate).
+	b, err := json.Marshal(denseTrafficChart(rows, from, maxD))
 	if err != nil {
 		return 0, js, nil, nil, err
 	}
@@ -536,8 +544,8 @@ func parseIndexQueryParams(r *http.Request) (sort, dir, query string, page, perP
 	return sort, dir, query, page, perPage
 }
 
-func loadFilteredIndexRepos(db *store.Store, sort, dir, query string) ([]store.RepoSummary, error) {
-	repos, err := db.ListRepos(sort, dir)
+func loadFilteredIndexRepos(db *store.Store, scope store.ReportVisibility, sort, dir, query string) ([]store.RepoSummary, error) {
+	repos, err := db.ListReportRepos(scope, sort, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -690,7 +698,7 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 		}
 
 		sort, dir, query, page, perPage := parseIndexQueryParams(r)
-		repos, err := loadFilteredIndexRepos(db, sort, dir, query)
+		repos, err := loadFilteredIndexRepos(db, cfg.ReportVisibility, sort, dir, query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -787,15 +795,16 @@ func handleRepoPage(cfg Config, db *store.Store, tmpl *template.Template) http.H
 		repo := r.PathValue("repo")
 		fullName := owner + "/" + repo
 
-		summary, err := db.RepoByName(fullName)
+		summary, err := db.ReportRepoByName(cfg.ReportVisibility, fullName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if summary == nil {
-			fullPath := "/" + owner + "/" + repo
 			lb := bindPageLocale(r, cfg)
-			writeBrutalistNotFound(w, r, tmpl, cfg, lb.T("not_found.repo_title"), lb.T("not_found.repo_heading"), fullPath, lb.T("not_found.repo_detail"))
+			// Do not echo a requested repository name into an HTML not-found body:
+			// excluded and absent repositories deliberately have the same response.
+			writeBrutalistNotFound(w, r, tmpl, cfg, lb.T("not_found.repo_title"), lb.T("not_found.repo_heading"), "", lb.T("not_found.repo_detail"))
 			return
 		}
 
@@ -804,12 +813,29 @@ func handleRepoPage(cfg Config, db *store.Store, tmpl *template.Template) http.H
 
 		views, _ := db.ViewsByRange(fullName, from, to)
 		clones, _ := db.ClonesByRange(fullName, from, to)
+		viewsFreshness, clonesFreshness, freshErr := repoTrafficFreshness(db, fullName, time.Now().UTC())
+		if freshErr != nil {
+			http.Error(w, freshErr.Error(), http.StatusInternalServerError)
+			return
+		}
 		stars, _ := db.StarsByRepo(fullName)
 		referrers, _ := db.PopularReferrers(fullName, 14)
 		paths, _ := db.PopularPaths(fullName, 14)
 
-		viewsJSON, _ := json.Marshal(views)
-		clonesJSON, _ := json.Marshal(clones)
+		// Detail charts keep the UTC calendar continuous. Pointer values encode a
+		// confirmed explicit zero as 0 and an unreported day as JSON null.
+		viewsChart, chartErr := denseTrafficChartWithCoverage(db, fullName, "views", from, to, views)
+		if chartErr != nil {
+			http.Error(w, chartErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		clonesChart, chartErr := denseTrafficChartWithCoverage(db, fullName, "clones", from, to, clones)
+		if chartErr != nil {
+			http.Error(w, chartErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		viewsJSON, _ := json.Marshal(viewsChart)
+		clonesJSON, _ := json.Marshal(clonesChart)
 		starsJSON, _ := json.Marshal(stars)
 
 		var momentum7d, momentum30d string
@@ -830,6 +856,8 @@ func handleRepoPage(cfg Config, db *store.Store, tmpl *template.Template) http.H
 			BadgeBaseURL     string
 			ViewsJSON        template.JS
 			ClonesJSON       template.JS
+			ViewsFreshness   trafficFreshness
+			ClonesFreshness  trafficFreshness
 			StarsJSON        template.JS
 			Referrers        []store.PopularItem
 			Paths            []store.PopularItem
@@ -848,6 +876,8 @@ func handleRepoPage(cfg Config, db *store.Store, tmpl *template.Template) http.H
 			BadgeBaseURL:     publicBaseURL(r, cfg.PublicURL),
 			ViewsJSON:        template.JS(viewsJSON),
 			ClonesJSON:       template.JS(clonesJSON),
+			ViewsFreshness:   viewsFreshness,
+			ClonesFreshness:  clonesFreshness,
 			StarsJSON:        template.JS(starsJSON),
 			Referrers:        referrers,
 			Paths:            paths,
@@ -891,6 +921,14 @@ func writeJSONNotFound(w http.ResponseWriter) {
 }
 
 func writeBrutalistNotFound(w http.ResponseWriter, r *http.Request, tmpl *template.Template, cfg Config, layoutTitle, heading, path, detail string) {
+	// Render every not-found page against a neutral URL. Besides canonical tags,
+	// layout controls (such as locale links) otherwise echo an excluded request.
+	renderRequest := r.Clone(r.Context())
+	renderURL := *r.URL
+	renderURL.Path = "/"
+	renderURL.RawPath = ""
+	renderURL.RawQuery = ""
+	renderRequest.URL = &renderURL
 	lb := bindPageLocale(r, cfg)
 	content := executeTemplate(tmpl, "not_found", notFoundContentData{
 		localeBinder: lb,
@@ -898,7 +936,7 @@ func writeBrutalistNotFound(w http.ResponseWriter, r *http.Request, tmpl *templa
 		Path:         path,
 		Detail:       detail,
 	})
-	renderLayoutStatus(w, r, tmpl, cfg, layoutData{
+	renderLayoutStatus(w, renderRequest, tmpl, cfg, layoutData{
 		Title:       layoutTitle,
 		PageID:      "not_found",
 		Version:     version.Version,
@@ -921,7 +959,7 @@ func renderLayoutStatus(w http.ResponseWriter, r *http.Request, tmpl *template.T
 		data.SyncUIEnabled = true
 	}
 	if cfg.Store != nil {
-		if n, err := cfg.Store.FeaturedCount(); err == nil && n > 0 {
+		if n, err := cfg.Store.ReportFeaturedCount(cfg.ReportVisibility); err == nil && n > 0 {
 			data.ShowFeatured = true
 		}
 	}

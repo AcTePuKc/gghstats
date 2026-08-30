@@ -20,10 +20,10 @@ const MetricsPath = "/metrics"
 
 // MetricsRegistryConfig configures the Prometheus registry and domain metrics.
 type MetricsRegistryConfig struct {
-	Store          *store.Store
-	DBPath         string
-	Filter         string
-	PerRepoEnabled bool
+	Store            *store.Store
+	DBPath           string
+	PerRepoEnabled   bool
+	ReportVisibility store.ReportVisibility
 }
 
 // NewMetricsRegistry creates a registry with build/runtime collectors and domain metrics.
@@ -34,12 +34,11 @@ func NewMetricsRegistry(cfg MetricsRegistryConfig) (*prometheus.Registry, *metri
 	if cfg.Store != nil {
 		st := cfg.Store
 		dom = metrics.RegisterDomain(reg, metrics.DomainConfig{
-			Filter:         cfg.Filter,
 			DBPath:         cfg.DBPath,
-			StoreRepoCount: st.RepoCount,
+			StoreRepoCount: func() (int, error) { return st.ReportRepoCount(cfg.ReportVisibility) },
 			PerRepoEnabled: cfg.PerRepoEnabled,
 			ListRepos: func() ([]store.RepoSummary, error) {
-				return st.ListRepos("name", "asc")
+				return st.ListReportRepos(cfg.ReportVisibility, "name", "asc")
 			},
 		})
 		dom.RefreshStoreGauges()

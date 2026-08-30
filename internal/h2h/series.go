@@ -14,6 +14,9 @@ type ChartPoint struct {
 }
 
 // AlignCloneSeries builds union date labels and parallel count slices for two repos (30d window).
+// H2H deliberately uses zero for a repo absent on the other repo's reported day:
+// its score and historical momentum semantics define missing rows as zero. Detail
+// and index charts do not use this helper and preserve unknown rows as null.
 func AlignCloneSeries(a, b []store.DayRow) (labels []string, countsA, countsB []int) {
 	return alignDayRows(a, b)
 }

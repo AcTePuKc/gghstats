@@ -107,3 +107,35 @@ func TestCatalogDispatch(t *testing.T) {
 		t.Fatal("featured command not registered")
 	}
 }
+
+func TestRepoReportCLI(t *testing.T) {
+	s, path := openCatalogTestDB(t)
+	if err := s.UpsertRepoWithVisibility("owner/repo", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "owner/repo", store.ReportExclude}); err != nil {
+		t.Fatalf("set: %v", err)
+	}
+	s, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo, err := s.ReportRepoByName(store.ReportVisibility{}, "owner/repo"); err != nil || repo != nil {
+		t.Fatalf("excluded repo=%+v err=%v", repo, err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := runRepoReport([]string{"ls", "--db", path}); err != nil {
+		t.Fatalf("ls: %v", err)
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "owner/repo", "invalid"}); err == nil {
+		t.Fatal("expected invalid policy error")
+	}
+	if err := runRepoReport([]string{"set", "--db", path, "missing/repo", store.ReportInclude}); err == nil {
+		t.Fatal("expected missing repository error")
+	}
+}

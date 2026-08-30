@@ -215,6 +215,38 @@ On each repository’s detail page, the **Clones** and **Views** bar charts are 
 
 Exact colors depend on light/dark theme (Bootstrap `--bs-primary` / `--bs-info`, overridden in the app’s neo-brutalist CSS). Chart **legends** (e.g. Unique / Count) follow the active UI locale. Use the tooltip on each bar for values.
 
+### Traffic freshness and coverage
+
+GitHub Traffic is a rolling response and can be late or temporarily incomplete.
+For each repository and each independent metric (**views** and **clones**),
+gghstats persists the last successful fetch time, latest observed UTC date,
+latest response coverage, status, and last error in SQLite. The repository page
+and traffic API therefore show one of: **Fresh**, **Delayed**, **Missing
+completed days**, **Fetch failed**, or **Never synced**.
+
+- A row explicitly returned by GitHub with `count: 0` is a **confirmed zero**.
+- An absent date is **unknown**, never inferred as zero. Detail-chart payloads
+  retain every UTC calendar date and encode unknown count/unique values as
+  `null`, so Chart.js renders a gap rather than compressing or zero-filling it.
+- Freshness and missing-day checks use completed **UTC** days only. The current
+  UTC day is deliberately not considered missing because GitHub commonly
+  publishes it late.
+- A later GitHub response can revise a daily count; the successful response
+  replaces that day’s stored traffic values and coverage atomically. A newer
+  partial response cannot make an older cached row look confirmed inside its
+  coverage window.
+- Views and clones are fetched independently. If one fails, the successful
+  sibling data remains stored, the failed metric exposes its error state, and
+  the repo/run is not reported as fully successful.
+
+The index aggregate chart is intentionally narrower: it can show totals from
+repositories with different coverage and does not currently expose a
+per-repository coverage matrix. Use an individual repository traffic chart and
+its freshness state when completeness matters. Some established calculations
+(H2H momentum and rolling aggregate counters) intentionally treat absent days
+as zero; that is calculation semantics, not a statement that GitHub reported
+zero traffic.
+
 [Back to top](#gghstats)
 
 ## Quick start
@@ -411,7 +443,7 @@ Server behavior:
 - SEO (per deployment): `GET /robots.txt`, `GET /sitemap.xml` (repo pages from SQLite; set **`GGHSTATS_PUBLIC_URL`** in production)
 - Prometheus: `GET /metrics` (disable with `GGHSTATS_METRICS=false`)
 - Listen port: `GGHSTATS_PORT` (default `8080`) or `gghstats serve --port <port>` (or `gghstats run --open` for local try)
-- First stderr line on start: version, build date, `GOOS`/`GOARCH`, listen address, masked GitHub token (`XXXX....YYYY`); then slog at `GGHSTATS_LOG_LEVEL` (default `info`). Every structured slog line is prefixed with `gghstats ` so it is easy to grep in shared log streams.
+- First stderr line on start: version, build date, `GOOS`/`GOARCH`, and listen address; it contains no token or token-derived fragment. Then slog uses `GGHSTATS_LOG_LEVEL` (default `info`). Every structured slog line is prefixed with `gghstats ` so it is easy to grep in shared log streams.
 
 ### CLI mode
 
@@ -432,7 +464,26 @@ touching `/` KPIs.
 gghstats repo add hrodrig/extra-one     # pin into the traffic set
 gghstats featured add hrodrig/awesome-readme   # showcase on /featured
 gghstats repo ls && gghstats featured ls
+gghstats repo report ls
+gghstats repo report set hrodrig/extra-one exclude
 ```
+
+### Report visibility
+
+Collection (`GGHSTATS_INCLUDE_PRIVATE`, `GGHSTATS_FILTER`, pins, and manual
+fetch) controls what is retained locally. Reporting is a separate, fail-closed
+boundary: public repositories with `inherit` are shown; private repositories
+need `GGHSTATS_REPORT_PRIVATE=true` or an explicit `include`; `unknown` is
+hidden; and `exclude` always wins. Use `gghstats repo report set OWNER/REPO
+inherit|include|exclude` to change a stored repository immediately. The policy
+is applied server-side to pages, APIs, exports, badges, metrics, sitemap, H2H,
+and reporting alerts; excluded direct requests respond as not found.
+
+This change never deletes collected history. An excluded repository continues
+to sync and remains in SQLite; changing it back to `include` makes its existing
+history available immediately. Existing databases upgrade with visibility set
+to `unknown`, so their repositories remain hidden from reports until a metadata
+sync records public/private visibility or an operator explicitly includes one.
 
 Full reference — semantics, `--db`/`GGHSTATS_DB`, metadata sync, nav
 hide-when-empty, and troubleshooting — lives in
@@ -508,7 +559,8 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 | `GGHSTATS_HOST` | `127.0.0.1` | Bind address (localhost only on bare metal). **Production Compose** sets `0.0.0.0` in **[gghstats-selfhosted](https://github.com/hrodrig/gghstats-selfhosted)** |
 | `GGHSTATS_PORT` | `8080` | Listen port |
 | `GGHSTATS_FILTER` | `*` | Repo filter expression |
-| `GGHSTATS_INCLUDE_PRIVATE` | `false` | Include private repos |
+| `GGHSTATS_INCLUDE_PRIVATE` | `false` | Collect private repositories during discovery. This is storage/collection scope only; it does not make them report-visible. |
+| `GGHSTATS_REPORT_PRIVATE` | `false` | Include inherited private repositories in reports. Collection is separate; unknown visibility remains hidden until refreshed or explicitly included. |
 | `GGHSTATS_SYNC_INTERVAL` | `1h` | Sync frequency |
 | `GGHSTATS_SYNC_ON_STARTUP` | `true` | Full sync when the process starts; set `false` to serve immediately using existing SQLite data |
 | `GGHSTATS_SYNC_WORKERS` | `4` | Concurrent repos per sync cycle (same as `gghstats serve --sync-workers`) |
@@ -523,7 +575,7 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 | `GGHSTATS_PUBLIC_URL` | (none) | Optional public base URL for embed snippets, **`/sitemap.xml`**, **`/robots.txt`**, and alert dashboard links (e.g. `https://gghstats.example.com`); if unset, uses the request `Host`. On `localhost` / `127.0.0.1`, robots disallows crawling unless this is set |
 | `GGHSTATS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error` (slog only; startup banner always prints) |
 | `GGHSTATS_METRICS` | (enabled) | Set to `false` to disable `GET /metrics` |
-| `GGHSTATS_METRICS_PER_REPO` | `false` | Set to `true` to expose per-repo Prometheus gauges (`owner`, `repo` labels); higher cardinality |
+| `GGHSTATS_METRICS_PER_REPO` | `false` | Set to `true` to expose per-repo Prometheus gauges (`owner`, `repo` labels) only for report-visible repositories; higher cardinality |
 | `GGHSTATS_CUSTOM_CSS` | (none) | Optional **regular** `.css` file: loaded **after** built-in `app.css` at `/theme/custom.css` so you can tone down neo-brutalism or replace accents (see [Custom UI theme](#custom-ui-theme-optional)) |
 | `GGHSTATS_DEFAULT_LOCALE` | `en` | Default **dashboard** language when no cookie, `?lang=`, or `Accept-Language` match (see [Web UI languages](#web-ui-languages-i18n)) |
 | `GGHSTATS_ENABLED_LOCALES` | `en,es,de` | Comma-separated locales shown in the sidebar selector and accepted from `?lang=` / cookie |
@@ -924,7 +976,7 @@ On each repository page, the **Embed badge** card builds this Markdown (metric s
 | `clones` | array | Daily clone rows: `date`, `count`, `uniques` (GitHub traffic semantics). |
 | `views` | array | Daily view rows: same shape. |
 
-Missing days in the window are omitted (not zero-filled). This matches the repo detail charts, which only plot days with rows in the database.
+Missing days in the window are omitted (not zero-filled). Each metric also includes freshness metadata: fetch time, endpoint status, latest observed/completed UTC day, and missing completed days. Repository detail charts retain the UTC calendar: explicit `0` is confirmed zero traffic and an unreported day is rendered as a gap (`null`). H2H scoring and momentum intentionally retain their documented missing-day-as-zero calculation.
 
 ```bash
 curl -sS -H "x-api-token: $GGHSTATS_API_TOKEN" \
@@ -1055,7 +1107,7 @@ curl -sS -H "x-api-token: $GGHSTATS_API_TOKEN" http://localhost:8080/api/repos
 
 **Domain series** (besides HTTP and Go runtime): `gghstats_repos_total`, `gghstats_db_size_bytes`, `gghstats_last_sync_timestamp_seconds`, `gghstats_sync_duration_seconds`, `gghstats_github_api_requests_total`, `gghstats_github_rate_limit_remaining`. Refreshed on each scrape and after each successful sync.
 
-**Per-repo gauges** (optional, `GGHSTATS_METRICS_PER_REPO=true`): `gghstats_repo_stars`, `gghstats_repo_forks`, `gghstats_repo_clones`, `gghstats_repo_views`, `gghstats_repo_clones_1d`, `gghstats_repo_clones_7d`, `gghstats_repo_clones_30d` — same semantics as the dashboard **(1d)/(7d)/(30d)** columns. Use with [gghstats-selfhosted observability](https://github.com/hrodrig/gghstats-selfhosted/tree/main/run/docker-compose/observability).
+**Per-repo gauges** (optional, `GGHSTATS_METRICS_PER_REPO=true`): `gghstats_repo_stars`, `gghstats_repo_forks`, `gghstats_repo_clones`, `gghstats_repo_views`, `gghstats_repo_clones_1d`, `gghstats_repo_clones_7d`, `gghstats_repo_clones_30d` — same semantics as the dashboard **(1d)/(7d)/(30d)** columns and limited to report-visible repositories. `/metrics` contains no repository-identifying `GGHSTATS_FILTER` configuration label; useful operational metrics remain, but privacy takes precedence. Use with [gghstats-selfhosted observability](https://github.com/hrodrig/gghstats-selfhosted/tree/main/run/docker-compose/observability).
 
 See [Security and quality](#security-and-quality) for the local tooling that scans this surface in CI.
 
@@ -1214,10 +1266,15 @@ Security tooling:
 
 ## Database
 
-SQLite path comes from `GGHSTATS_DB`. Main tables: `repos`, `views`, `clones`, `referrers`, `paths`, `stars`.
+SQLite path comes from `GGHSTATS_DB`. Main tables: `repos`, `views`, `clones`, `referrers`, `paths`, `stars`, plus persisted `traffic_metric_state` / `traffic_metric_coverage` for per-metric freshness and coverage.
 
 - Upserts are idempotent
 - Startup migration uses `PRAGMA user_version`
+- Migration v7 adds traffic freshness/coverage state. Migration v8 adds
+  `repos.github_visibility` and `repos.report_policy` plus an index for report
+  decisions. The upgrade is restart-safe; it does not delete traffic or other
+  historical rows. Pre-v8 repository rows begin as `unknown` + `inherit` and
+  are intentionally hidden until refreshed or explicitly included.
 
 ### Concurrency (reads while sync writes)
 
