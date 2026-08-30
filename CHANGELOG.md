@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Unique cloners / viewers UX (U1):** index KPI cards and repo stats show uniques as the primary figure with clone/view **events** secondary; table columns use `Unique / clones` and `Unique / views`. Labels clarify GitHub daily-unique sums (not lifetime machines).
 
+### Fixed
+
+- **Locale-aware chart and stats numbers (#22):** Chart.js y-axis ticks and tooltips (index, repo, H2H) mirror `i18n.FormatCount` using the page locale and `GGHSTATS_COMPACT_NUMBERS`. The daily clone statistics panel formats floats with locale separators (`FormatFloat`) and ints via `FormatCount` instead of raw `strconv.FormatFloat`.
+
 ## [1.3.0] - 2026-08-24
 
 ### Added

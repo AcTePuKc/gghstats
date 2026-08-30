@@ -104,10 +104,22 @@ func mergeLayoutLocale(r *http.Request, cfg Config, data layoutData) layoutData 
 	data.localeBinder = lb
 	data.LocaleLinks = buildLocaleLinks(r, cfg, loc)
 	data.JSI18n = marshalJSI18n(bundle, loc)
+	data.JSNumberFormat = marshalJSNumberFormat(loc, cfg.CompactNumbers)
 	if data.PageID == "" && len(data.Breadcrumbs) == 0 {
 		data.PageID = "index"
 	}
 	return data
+}
+
+func marshalJSNumberFormat(locale string, compact bool) template.JS {
+	raw, err := json.Marshal(map[string]any{
+		"locale":  i18n.NormalizeLocale(locale),
+		"compact": compact,
+	})
+	if err != nil {
+		return template.JS(`{"locale":"en","compact":false}`)
+	}
+	return template.JS(raw)
 }
 
 func bindPageLocale(r *http.Request, cfg Config) localeBinder {

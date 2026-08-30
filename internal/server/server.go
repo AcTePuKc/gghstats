@@ -393,6 +393,8 @@ type layoutData struct {
 	Query            string // current index search query, used by the matching JSONL export
 	LocaleLinks      []localeLink
 	JSI18n           template.JS
+	// JSNumberFormat exposes locale + compact flag for Chart.js tick/tooltip formatting.
+	JSNumberFormat template.JS
 	// CustomStylesheetURL is set when GGHSTATS_CUSTOM_CSS points to a valid file (safe for href).
 	CustomStylesheetURL template.URL
 	// SyncUIEnabled shows the sidebar “Sync now” control (requires API token + coordinator).
@@ -471,7 +473,7 @@ func fillLayoutDefaults(d layoutData) layoutData {
 
 // buildIndexListClonesChartPayload returns JSON (for Chart.js) of daily clone totals across repoNames,
 // scoped to the last indexCloneChartMaxDays ending at the newest clone date in the DB.
-func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggCount int, js template.JS, stats, uniqueStats *cloneStatistics, err error) {
+func buildIndexListClonesChartPayload(db *store.Store, repoNames []string, locale string, compact bool) (aggCount int, js template.JS, stats, uniqueStats *cloneStatistics, err error) {
 	js = template.JS("[]")
 	if len(repoNames) == 0 {
 		return 0, js, nil, nil, nil
@@ -503,7 +505,10 @@ func buildIndexListClonesChartPayload(db *store.Store, repoNames []string) (aggC
 	if err != nil {
 		return 0, js, nil, nil, err
 	}
-	return len(rows), template.JS(b), calculateCloneStatistics(rows), calculateUniqueCloneStatistics(rows), nil
+	return len(rows), template.JS(b),
+		calculateCloneStatistics(rows, locale, compact),
+		calculateUniqueCloneStatistics(rows, locale, compact),
+		nil
 }
 
 func parseIndexQueryParams(r *http.Request) (sort, dir, query string, page, perPage int) {
@@ -690,7 +695,9 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(db, repoNamesFromSummaries(repos))
+		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(
+			db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), cfg.CompactNumbers,
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

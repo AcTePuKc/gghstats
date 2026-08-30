@@ -3,8 +3,8 @@ package server
 import (
 	"math"
 	"sort"
-	"strconv"
 
+	"github.com/hrodrig/gghstats/internal/i18n"
 	"github.com/hrodrig/gghstats/internal/store"
 )
 
@@ -13,20 +13,20 @@ type cloneStatistics struct {
 	Median            string
 	Variance          string
 	StandardDeviation string
-	Minimum           int
-	Maximum           int
-	P95               int
+	Minimum           string
+	Maximum           string
+	P95               string
 }
 
-func calculateCloneStatistics(rows []store.DayRow) *cloneStatistics {
-	return calculateCloneStatisticsFor(rows, func(row store.DayRow) int { return row.Count })
+func calculateCloneStatistics(rows []store.DayRow, locale string, compact bool) *cloneStatistics {
+	return calculateCloneStatisticsFor(rows, locale, compact, func(row store.DayRow) int { return row.Count })
 }
 
-func calculateUniqueCloneStatistics(rows []store.DayRow) *cloneStatistics {
-	return calculateCloneStatisticsFor(rows, func(row store.DayRow) int { return row.Uniques })
+func calculateUniqueCloneStatistics(rows []store.DayRow, locale string, compact bool) *cloneStatistics {
+	return calculateCloneStatisticsFor(rows, locale, compact, func(row store.DayRow) int { return row.Uniques })
 }
 
-func calculateCloneStatisticsFor(rows []store.DayRow, value func(store.DayRow) int) *cloneStatistics {
+func calculateCloneStatisticsFor(rows []store.DayRow, locale string, compact bool, value func(store.DayRow) int) *cloneStatistics {
 	if len(rows) == 0 {
 		return nil
 	}
@@ -54,16 +54,12 @@ func calculateCloneStatisticsFor(rows []store.DayRow, value func(store.DayRow) i
 	p95Index := int(math.Ceil(0.95*float64(len(values)))) - 1
 
 	return &cloneStatistics{
-		Mean:              formatCloneStatistic(mean),
-		Median:            formatCloneStatistic(median),
-		Variance:          formatCloneStatistic(variance),
-		StandardDeviation: formatCloneStatistic(math.Sqrt(variance)),
-		Minimum:           int(values[0]),
-		Maximum:           int(values[len(values)-1]),
-		P95:               int(values[p95Index]),
+		Mean:              i18n.FormatFloat(mean, locale, 2),
+		Median:            i18n.FormatFloat(median, locale, 2),
+		Variance:          i18n.FormatFloat(variance, locale, 2),
+		StandardDeviation: i18n.FormatFloat(math.Sqrt(variance), locale, 2),
+		Minimum:           i18n.FormatCount(int(values[0]), locale, compact),
+		Maximum:           i18n.FormatCount(int(values[len(values)-1]), locale, compact),
+		P95:               i18n.FormatCount(int(values[p95Index]), locale, compact),
 	}
-}
-
-func formatCloneStatistic(value float64) string {
-	return strconv.FormatFloat(value, 'f', 2, 64)
 }
