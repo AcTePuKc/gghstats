@@ -1,0 +1,168 @@
+package server
+
+import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestSettingsPageIsReadOnlyAndRedacted(t *testing.T) {
+	db := testStore(t)
+	h := New(Config{
+		Store:          db,
+		APIToken:       "api-secret-must-not-render",
+		DisableMetrics: true,
+		Settings: SettingsSnapshot{
+			RuntimeMode:           "Production",
+			Host:                  "127.0.0.1",
+			Port:                  "8080",
+			DatabaseReady:         true,
+			GithubTokenConfigured: true,
+			APITokenConfigured:    true,
+			FilterAll:             false,
+			IncludePrivate:        false,
+			ReportPrivate:         false,
+			SyncInterval:          "1h0m0s",
+			SyncOnStartup:         true,
+			SyncWorkers:           4,
+			BadgePublic:           true,
+			MetricsEnabled:        true,
+			RateLimitEnabled:      true,
+			CompactNumbers:        false,
+			DefaultLocale:         "en",
+			EnabledLocales:        []string{"en", "es"},
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/settings", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	for _, forbidden := range []string{"api-secret-must-not-render", "ghp_example_secret", `C:\secret\gghstats.db`} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("settings page leaked %q", forbidden)
+		}
+	}
+	for _, expected := range []string{"Settings and safety", "Read only", "Custom filter configured", "GitHub access"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("settings page missing %q", expected)
+		}
+	}
+}
+
+func TestSettingsUpdateRequiresAPITokenAndPersistsAllowlistedValues(t *testing.T) {
+	db := testStore(t)
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	manager, err := NewSettingsManager(settingsPath, EditableSettings{
+		DefaultLocale:  "en",
+		CompactNumbers: false,
+	}, []string{"en", "de"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{
+		Store:           db,
+		APIToken:        "admin-secret",
+		SettingsManager: manager,
+		DefaultLocale:   "en",
+		EnabledLocales:  []string{"en", "de"},
+		DisableMetrics:  true,
+	})
+
+	post := func(token, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/settings", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
+		if token != "" {
+			req.Header.Set("x-api-token", token)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		return w
+	}
+
+	if got := post("", `{"compact_numbers":true}`).Code; got != http.StatusUnauthorized {
+		t.Fatalf("missing token status = %d, want %d", got, http.StatusUnauthorized)
+	}
+	if got := post("admin-secret", `{"compact_numbers":true,"default_locale":"de"}`).Code; got != http.StatusOK {
+		t.Fatalf("valid update status = %d, want %d", got, http.StatusOK)
+	}
+	values := manager.Snapshot()
+	if !values.CompactNumbers || values.DefaultLocale != "de" {
+		t.Fatalf("updated values = %+v", values)
+	}
+	raw, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "admin-secret") || strings.Contains(string(raw), settingsPath) {
+		t.Fatalf("settings file contains protected data: %s", raw)
+	}
+	if got := post("admin-secret", `{"database":"/secret/path"}`).Code; got != http.StatusBadRequest {
+		t.Fatalf("unknown field status = %d, want %d", got, http.StatusBadRequest)
+	}
+	if got := post("admin-secret", `{"default_locale":"bg"}`).Code; got != http.StatusBadRequest {
+		t.Fatalf("disabled locale status = %d, want %d", got, http.StatusBadRequest)
+	}
+}
+
+func TestSettingsUpdateAllowsSafePreferencesOnLoopbackWithoutToken(t *testing.T) {
+	db := testStore(t)
+	manager, err := NewSettingsManager(filepath.Join(t.TempDir(), "settings.json"), EditableSettings{
+		DefaultLocale: "en",
+	}, []string{"en", "de"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{
+		Store:             db,
+		SettingsManager:   manager,
+		LocalOnlySettings: true,
+		DefaultLocale:     "en",
+		EnabledLocales:    []string{"en", "de"},
+		DisableMetrics:    true,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings", bytes.NewBufferString(`{"compact_numbers":true,"default_locale":"de"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("local update status = %d, want %d", w.Code, http.StatusOK)
+	}
+	values := manager.Snapshot()
+	if !values.CompactNumbers || values.DefaultLocale != "de" {
+		t.Fatalf("updated values = %+v", values)
+	}
+	get := httptest.NewRequest(http.MethodGet, "/settings?lang=en", nil)
+	page := httptest.NewRecorder()
+	h.ServeHTTP(page, get)
+	if page.Code != http.StatusOK {
+		t.Fatalf("local settings page status = %d, want %d", page.Code, http.StatusOK)
+	}
+	body := page.Body.String()
+	if !strings.Contains(body, "Local-only controls") || !strings.Contains(body, `data-local-only="true"`) {
+		t.Fatal("local settings page should expose token-free safe controls")
+	}
+}
+
+func TestSettingsUpdateIsUnavailableWithoutTokenOnNonLoopback(t *testing.T) {
+	db := testStore(t)
+	manager, err := NewSettingsManager("", EditableSettings{DefaultLocale: "en"}, []string{"en"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{Store: db, SettingsManager: manager, DisableMetrics: true})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings", bytes.NewBufferString(`{"compact_numbers":true}`))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("unprotected remote update status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	}
+}

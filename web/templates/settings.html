@@ -1,0 +1,125 @@
+{{define "settings"}}
+<section class="app-settings-page" aria-labelledby="settings-heading">
+  <div class="app-settings-intro">
+    <div>
+      <p class="app-settings-kicker">{{call .T "settings.kicker"}}</p>
+      <h2 id="settings-heading">{{call .T "settings.heading"}}</h2>
+      <p>{{call .T "settings.intro"}}</p>
+    </div>
+    <span class="badge app-settings-readonly">{{if .Settings.Editable}}{{if .Settings.LocalOnly}}{{call .T "settings.local_only_controls"}}{{else}}{{call .T "settings.protected_controls"}}{{end}}{{else}}{{call .T "settings.read_only"}}{{end}}</span>
+  </div>
+
+  <div class="alert app-settings-boundary mb-4" role="note">
+    <strong>{{call .T "settings.lifecycle_title"}}</strong>
+    <span class="d-block mt-1">{{if .Settings.Editable}}{{if .Settings.LocalOnly}}{{call .T "settings.lifecycle_local"}}{{else}}{{call .T "settings.lifecycle_editable"}}{{end}}{{else}}{{call .T "settings.lifecycle_text"}}{{end}}</span>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-xl-6">
+      <section class="card app-settings-card">
+        <header class="card-header">
+          <div>
+            <h3>{{call .T "settings.collection_title"}}</h3>
+            <p>{{call .T "settings.collection_help"}}</p>
+          </div>
+        </header>
+        <div class="card-body">
+          <dl class="app-settings-list">
+            <div class="app-settings-row"><dt>{{call .T "settings.repository_scope"}}</dt><dd>{{if .Settings.FilterAll}}{{call .T "settings.all_repositories"}}{{else}}{{call .T "settings.custom_filter"}}{{end}}</dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.include_private"}}</dt><dd><span class="app-settings-status{{if not .Settings.IncludePrivate}} is-off{{end}}">{{if .Settings.IncludePrivate}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.report_private"}}</dt><dd><span class="app-settings-status{{if not .Settings.ReportPrivate}} is-off{{end}}">{{if .Settings.ReportPrivate}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.sync_interval"}}</dt><dd>{{.Settings.SyncInterval}}</dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.sync_startup"}}</dt><dd><span class="app-settings-status{{if not .Settings.SyncOnStartup}} is-off{{end}}">{{if .Settings.SyncOnStartup}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.sync_workers"}}</dt><dd>{{.Settings.SyncWorkers}}</dd></div>
+          </dl>
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <section class="card app-settings-card">
+        <header class="card-header">
+          <div>
+            <h3>{{call .T "settings.runtime_title"}}</h3>
+            <p>{{call .T "settings.runtime_help"}}</p>
+          </div>
+        </header>
+        <div class="card-body">
+          <dl class="app-settings-list">
+            <div class="app-settings-row"><dt>{{call .T "settings.runtime_mode"}}</dt><dd>{{.Settings.RuntimeMode}}</dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.listen_address"}}</dt><dd>{{.Settings.Host}}:{{.Settings.Port}}</dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.database"}}</dt><dd><span class="app-settings-status{{if not .Settings.DatabaseReady}} is-off{{end}}">{{if .Settings.DatabaseReady}}{{call .T "settings.active"}}{{else}}{{call .T "settings.unavailable"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.github_access"}}</dt><dd><span class="app-settings-status{{if not .Settings.GithubTokenConfigured}} is-off{{end}}">{{if .Settings.GithubTokenConfigured}}{{call .T "settings.configured"}}{{else}}{{call .T "settings.not_configured"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.api_auth"}}</dt><dd><span class="app-settings-status{{if not .Settings.APITokenConfigured}} is-off{{end}}">{{if .Settings.APITokenConfigured}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.rate_limit"}}</dt><dd><span class="app-settings-status{{if not .Settings.RateLimitEnabled}} is-off{{end}}">{{if .Settings.RateLimitEnabled}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.metrics"}}</dt><dd><span class="app-settings-status{{if not .Settings.MetricsEnabled}} is-off{{end}}">{{if .Settings.MetricsEnabled}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.badges"}}</dt><dd><span class="app-settings-status{{if not .Settings.BadgePublic}} is-off{{end}}">{{if .Settings.BadgePublic}}{{call .T "settings.public"}}{{else}}{{call .T "settings.protected"}}{{end}}</span></dd></div>
+          </dl>
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <section class="card app-settings-card">
+        <header class="card-header">
+          <div>
+            <h3>{{call .T "settings.interface_title"}}</h3>
+            <p>{{call .T "settings.interface_help"}}</p>
+          </div>
+        </header>
+        <div class="card-body">
+          <dl class="app-settings-list">
+            <div class="app-settings-row"><dt>{{call .T "settings.default_locale"}}</dt><dd>{{.Settings.DefaultLocale}}</dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.enabled_locales"}}</dt><dd>{{range $i, $loc := .Settings.EnabledLocales}}{{if $i}}, {{end}}{{$loc}}{{end}}</dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.compact_numbers"}}</dt><dd><span class="app-settings-status{{if not .Settings.CompactNumbers}} is-off{{end}}">{{if .Settings.CompactNumbers}}{{call .T "settings.enabled"}}{{else}}{{call .T "settings.disabled"}}{{end}}</span></dd></div>
+            <div class="app-settings-row"><dt>{{call .T "settings.browser_preferences"}}</dt><dd>{{call .T "settings.browser_local"}}</dd></div>
+          </dl>
+          <p class="app-settings-note mt-3 mb-0">{{call .T "settings.language_help"}}</p>
+          <div class="app-settings-editor mt-4">
+            <div class="app-settings-editor-heading">
+              <h4>{{call .T "settings.editable_title"}}</h4>
+              <span class="badge app-settings-safety-badge">{{if .Settings.Editable}}{{if .Settings.LocalOnly}}{{call .T "settings.local_only_controls"}}{{else}}{{call .T "settings.admin_protected"}}{{end}}{{else}}{{call .T "settings.admin_required"}}{{end}}</span>
+            </div>
+            <p class="app-settings-note">{{if .Settings.Editable}}{{if .Settings.LocalOnly}}{{call .T "settings.editable_local_help"}}{{else}}{{call .T "settings.editable_help"}}{{end}}{{else}}{{call .T "settings.editable_locked"}}{{end}}</p>
+            {{if .Settings.Editable}}
+            <form id="settings-form" class="app-settings-form" data-local-only="{{if .Settings.LocalOnly}}true{{else}}false{{end}}" novalidate>
+              <div>
+                <label for="settings-default-locale" class="form-label">{{call .T "settings.default_locale"}}</label>
+                <select id="settings-default-locale" name="default_locale" class="form-select">
+                  {{range .Settings.EnabledLocales}}<option value="{{.}}"{{if eq . $.Settings.DefaultLocale}} selected{{end}}>{{.}}</option>{{end}}
+                </select>
+              </div>
+              <div class="form-check form-switch app-settings-check">
+                <input id="settings-compact-numbers" name="compact_numbers" class="form-check-input" type="checkbox"{{if .Settings.CompactNumbers}} checked{{end}}>
+                <label for="settings-compact-numbers" class="form-check-label">{{call .T "settings.compact_numbers"}}</label>
+              </div>
+              <button type="submit" class="btn app-brutal-btn app-settings-save">{{call .T "settings.save"}}</button>
+              <p id="settings-save-status" class="app-settings-note mb-0" role="status" aria-live="polite"></p>
+            </form>
+            {{end}}
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <section class="card app-settings-card">
+        <header class="card-header">
+          <div>
+            <h3>{{call .T "settings.boundary_title"}}</h3>
+            <p>{{call .T "settings.boundary_help"}}</p>
+          </div>
+        </header>
+        <div class="card-body">
+          <p class="app-settings-note mb-3">{{call .T "settings.boundary_text"}}</p>
+          <ul class="app-settings-note mb-0 ps-3">
+            <li>{{call .T "settings.boundary_credentials"}}</li>
+            <li>{{call .T "settings.boundary_network"}}</li>
+            <li>{{call .T "settings.boundary_files"}}</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+{{end}}

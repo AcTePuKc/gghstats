@@ -109,17 +109,27 @@
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card shadow-sm border-0 h-100 app-brutal-chart-card" data-gghstats-role="chart-card">
-      <div class="card-header fw-semibold bg-body-secondary border-bottom">{{.ChartClonesTitle}}</div>
+      <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <span class="fw-semibold">{{.ChartClonesTitle}}</span>
+        <button type="button" class="btn app-panel-toggle" data-bs-toggle="collapse" data-bs-target="#repo-clones-panel" aria-controls="repo-clones-panel" aria-expanded="true" aria-label="Toggle {{.ChartClonesTitle}}"><span aria-hidden="true">⌃</span></button>
+      </div>
+      <div id="repo-clones-panel" class="collapse show">
       <div class="card-body app-brutal-chart-well">
         <canvas id="chart_clones" class="chart-canvas" aria-label="{{.ChartClonesTitle}}"></canvas>
+      </div>
       </div>
     </div>
   </div>
   <div class="col-lg-6">
     <div class="card shadow-sm border-0 h-100 app-brutal-chart-card" data-gghstats-role="chart-card">
-      <div class="card-header fw-semibold bg-body-secondary border-bottom">{{.ChartViewsTitle}}</div>
+      <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <span class="fw-semibold">{{.ChartViewsTitle}}</span>
+        <button type="button" class="btn app-panel-toggle" data-bs-toggle="collapse" data-bs-target="#repo-views-panel" aria-controls="repo-views-panel" aria-expanded="true" aria-label="Toggle {{.ChartViewsTitle}}"><span aria-hidden="true">⌃</span></button>
+      </div>
+      <div id="repo-views-panel" class="collapse show">
       <div class="card-body app-brutal-chart-well">
         <canvas id="chart_views" class="chart-canvas" aria-label="{{.ChartViewsTitle}}"></canvas>
+      </div>
       </div>
     </div>
   </div>
@@ -133,9 +143,14 @@
 <div class="row g-4 mb-4">
   <div class="col-12">
     <div class="card shadow-sm border-0 app-brutal-chart-card">
-      <div class="card-header fw-semibold bg-body-secondary border-bottom">{{.ChartStarsTitle}}</div>
+      <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <span class="fw-semibold">{{.ChartStarsTitle}}</span>
+        <button type="button" class="btn app-panel-toggle" data-bs-toggle="collapse" data-bs-target="#repo-stars-panel" aria-controls="repo-stars-panel" aria-expanded="true" aria-label="Toggle {{.ChartStarsTitle}}"><span aria-hidden="true">⌃</span></button>
+      </div>
+      <div id="repo-stars-panel" class="collapse show">
       <div class="card-body chart-card-stars app-brutal-chart-well">
         <canvas id="chart_stars" class="chart-canvas chart-canvas-stars" aria-label="{{.ChartStarsTitle}}"></canvas>
+      </div>
       </div>
     </div>
   </div>
@@ -145,7 +160,11 @@
 <div class="row g-4">
   <div class="col-lg-6">
     <div class="card shadow-sm border-0 h-100">
-      <div class="card-header fw-semibold">{{call .T "repo.referrers"}}</div>
+      <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <span class="fw-semibold">{{call .T "repo.referrers"}}</span>
+        <button type="button" class="btn app-panel-toggle" data-bs-toggle="collapse" data-bs-target="#repo-referrers-panel" aria-controls="repo-referrers-panel" aria-expanded="true" aria-label="Toggle {{call .T "repo.referrers"}}"><span aria-hidden="true">⌃</span></button>
+      </div>
+      <div id="repo-referrers-panel" class="collapse show">
       <div class="card-body p-0">
         {{if .Referrers}}
         <div class="table-responsive">
@@ -160,11 +179,16 @@
         </div>
         {{else}}<p class="text-muted p-3 mb-0">{{call .T "repo.no_referrers"}}</p>{{end}}
       </div>
+      </div>
     </div>
   </div>
   <div class="col-lg-6">
     <div class="card shadow-sm border-0 h-100">
-      <div class="card-header fw-semibold">{{call .T "repo.paths"}}</div>
+      <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <span class="fw-semibold">{{call .T "repo.paths"}}</span>
+        <button type="button" class="btn app-panel-toggle" data-bs-toggle="collapse" data-bs-target="#repo-paths-panel" aria-controls="repo-paths-panel" aria-expanded="true" aria-label="Toggle {{call .T "repo.paths"}}"><span aria-hidden="true">⌃</span></button>
+      </div>
+      <div id="repo-paths-panel" class="collapse show">
       <div class="card-body p-0">
         {{if .Paths}}
         <div class="table-responsive">
@@ -178,6 +202,7 @@
           </table>
         </div>
         {{else}}<p class="text-muted p-3 mb-0">{{call .T "repo.no_paths"}}</p>{{end}}
+      </div>
       </div>
     </div>
   </div>

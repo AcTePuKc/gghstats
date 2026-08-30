@@ -12,7 +12,11 @@ function uiT(key, vars) {
 
 function currentTheme() {
   const theme = document.documentElement.getAttribute('data-bs-theme');
-  return theme === 'dark' ? 'dark' : 'light';
+  return theme === 'dark' || theme === 'midnight' ? theme : 'light';
+}
+
+function isDarkTheme() {
+  return currentTheme() !== 'light';
 }
 
 const mouseLinePlugin = {
@@ -26,7 +30,7 @@ const mouseLinePlugin = {
     ctx.moveTo(x, yAxis.top);
     ctx.lineTo(x, yAxis.bottom);
     ctx.lineWidth = 1;
-    ctx.strokeStyle = currentTheme() === 'dark'
+    ctx.strokeStyle = isDarkTheme()
       ? 'rgba(255, 255, 255, 0.35)'
       : 'rgba(100, 149, 237, 0.45)';
     ctx.stroke();
@@ -35,7 +39,7 @@ const mouseLinePlugin = {
 };
 
 function chartThemeColors() {
-  const dark = currentTheme() === 'dark';
+  const dark = isDarkTheme();
   const body = document.body;
   const root = getComputedStyle(body.classList.contains('app-brutalist') ? body : document.documentElement);
 
@@ -61,7 +65,7 @@ function chartThemeColors() {
 }
 
 function chartTooltipOptions(opts = {}) {
-  const dark = currentTheme() === 'dark';
+  const dark = isDarkTheme();
   const formatValues = opts.formatValues !== false;
   const asPercent = opts.asPercent === true;
   const base = {
@@ -96,16 +100,28 @@ function chartTooltipOptions(opts = {}) {
 }
 
 function applyTheme(theme) {
+  if (theme !== 'light' && theme !== 'dark' && theme !== 'midnight') theme = 'light';
   document.documentElement.setAttribute('data-bs-theme', theme);
   localStorage.setItem('gghstats-theme', theme);
   const btn = document.getElementById('theme-toggle');
   if (btn) {
-    btn.textContent = theme === 'dark' ? uiT('common.theme_dark') : uiT('common.theme_light');
+    const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'midnight' : 'light';
+    const labelKey = nextTheme === 'dark' ? 'common.theme_dark' : nextTheme === 'midnight' ? 'common.theme_midnight' : 'common.theme_light';
+    const label = uiT(labelKey);
+    const labelEl = document.getElementById('theme-toggle-label');
+    if (labelEl) labelEl.textContent = label;
+    btn.setAttribute('aria-label', label);
+    btn.dataset.tooltip = label;
+    btn.dataset.themeAction = nextTheme;
+    const icon = btn.querySelector('.app-theme-icon');
+    if (icon) icon.textContent = nextTheme === 'light' ? '☀' : nextTheme === 'midnight' ? '◉' : '☾';
   }
 }
 
 function toggleTheme() {
-  applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+  const theme = currentTheme();
+  const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'midnight' : 'light';
+  applyTheme(nextTheme);
   requestAnimationFrame(() => {
     refreshRepoCharts();
     refreshIndexListCharts();
@@ -123,6 +139,53 @@ function initThemeToggle() {
     applyTheme(currentTheme());
   }
   btn.addEventListener('click', toggleTheme);
+}
+
+function initSidebarToggle() {
+  const btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+
+  const update = () => {
+    const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    const key = collapsed ? 'nav.expand_nav' : 'nav.collapse_nav';
+    const label = uiT(key);
+    btn.setAttribute('aria-label', label);
+    btn.dataset.tooltip = label;
+    const icon = btn.querySelector('span');
+    if (icon) icon.textContent = collapsed ? '›' : '‹';
+  };
+
+  btn.addEventListener('click', () => {
+    const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('gghstats-sidebar-collapsed', String(collapsed));
+    update();
+  });
+  update();
+}
+
+function initLanguageSelect() {
+  const select = document.getElementById('language-select');
+  if (!select) return;
+  select.addEventListener('change', () => {
+    if (select.value) window.location.assign(select.value);
+  });
+}
+
+function initCollapsiblePanels() {
+  const toggles = document.querySelectorAll('.app-panel-toggle');
+  for (const toggle of toggles) {
+    const target = document.querySelector(toggle.dataset.bsTarget);
+    const icon = toggle.querySelector('span');
+    if (!target || !icon) continue;
+    const update = () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      icon.textContent = expanded ? '⌃' : '⌄';
+    };
+    target.addEventListener('shown.bs.collapse', update);
+    target.addEventListener('hidden.bs.collapse', update);
+    update();
+  }
 }
 
 const repoChartCanvasIds = ['chart_clones', 'chart_views', 'chart_stars'];
@@ -962,8 +1025,75 @@ function initTrafficJSONDownload() {
   });
 }
 
+function initSettingsForm() {
+  const form = document.getElementById('settings-form');
+  const statusEl = document.getElementById('settings-save-status');
+  if (!form || !statusEl) return;
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = form.querySelector('button[type="submit"]');
+    const select = document.getElementById('settings-default-locale');
+    const compact = document.getElementById('settings-compact-numbers');
+    if (!select || !compact) return;
+
+    const localOnly = form.dataset.localOnly === 'true';
+    let token = '';
+    if (!localOnly) {
+      token = syncApiToken();
+      if (!token) {
+        token = await requestSyncTokenModal();
+        if (!token) return;
+        sessionStorage.setItem(SYNC_TOKEN_KEY, token);
+      }
+    }
+
+    if (submit) submit.disabled = true;
+    statusEl.textContent = '';
+    try {
+      const res = await fetch('/api/v1/settings', {
+        method: 'POST',
+        headers: Object.assign({ 'content-type': 'application/json' }, token ? { 'x-api-token': token } : {}),
+        body: JSON.stringify({
+          default_locale: select.value,
+          compact_numbers: compact.checked
+        })
+      });
+      if (res.status === 401) {
+        sessionStorage.removeItem(SYNC_TOKEN_KEY);
+        statusEl.textContent = uiT('js.settings_invalid_token');
+        return;
+      }
+      if (!res.ok) {
+        statusEl.textContent = uiT('js.settings_save_failed');
+        return;
+      }
+      statusEl.textContent = uiT('js.settings_saved');
+      document.cookie = `gghstats_locale=${encodeURIComponent(select.value)}; path=/; max-age=31536000; samesite=lax`;
+      window.setTimeout(() => window.location.reload(), 350);
+    } catch {
+      statusEl.textContent = uiT('js.settings_save_failed');
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+}
+
+function initInitialSyncRefresh() {
+  const state = document.getElementById('initial-sync-state');
+  if (!state || state.dataset.syncRunning !== 'true') return;
+
+  const refresh = () => {
+    if (document.visibilityState === 'visible') window.location.reload();
+  };
+  window.setTimeout(refresh, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle();
+  initSidebarToggle();
+  initLanguageSelect();
+  initCollapsiblePanels();
   initRepoCharts();
   initIndexListCharts();
   initCloneStatisticsSelector();
@@ -971,6 +1101,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initBadgeEmbed();
   initSyncControl();
   initTrafficJSONDownload();
+  initSettingsForm();
+  initInitialSyncRefresh();
 });
 
 function renderMetrics(canvasId, data, uniqueCol, countCol, chartLabel) {

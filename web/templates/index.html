@@ -38,6 +38,17 @@
   </div>
 </div>
 
+{{if and .Repos .InitialSyncRunning}}
+<div id="initial-sync-state" class="alert app-initial-sync app-initial-sync-inline" data-sync-running="true" role="status" aria-live="polite">
+  <span class="app-sync-spinner" aria-hidden="true"></span>
+  <span><strong>{{call .T "index.initial_sync_title"}}</strong> {{call .T "index.initial_sync_partial"}}</span>
+</div>
+{{else if and .Repos .InitialSyncFailed}}
+<div id="initial-sync-state" class="alert app-initial-sync app-initial-sync-inline is-failed" data-sync-running="false" role="alert">
+  <span><strong>{{call .T "index.initial_sync_failed_title"}}</strong> {{call .T "index.initial_sync_failed_partial"}}</span>
+</div>
+{{end}}
+
 <div class="card shadow-sm border-0 mb-3">
   <div class="card-body border-bottom app-brutal-search-panel">
     <form method="get" class="row g-3 align-items-end" id="repo-search-form">
@@ -107,9 +118,22 @@
             {{else}}
             <tr>
               <td colspan="9" class="text-center text-muted py-5">
+                {{if .InitialSyncRunning}}
+                <div id="initial-sync-state" class="app-initial-sync" data-sync-running="true" role="status" aria-live="polite">
+                  <p class="mb-2 fw-semibold">{{call .T "index.initial_sync_title"}}</p>
+                  <p class="small mb-0">{{call .T "index.initial_sync_help"}}</p>
+                  <span class="app-sync-spinner mt-3" aria-hidden="true"></span>
+                </div>
+                {{else if .InitialSyncFailed}}
+                <div id="initial-sync-state" class="app-initial-sync is-failed" data-sync-running="false" role="alert">
+                  <p class="mb-2 fw-semibold">{{call .T "index.initial_sync_failed_title"}}</p>
+                  <p class="small mb-0">{{call .T "index.initial_sync_failed_help"}}</p>
+                </div>
+                {{else}}
                 <p class="mb-2">{{call .T "index.empty_title"}}</p>
                 <p class="small mb-0">{{call .T "index.empty_hint"}}</p>
                 <code class="d-inline-block mt-2 p-2 bg-body-secondary rounded small text-start">gghstats fetch --repo owner/repo --db ./data/gghstats.db --token $GGHSTATS_GITHUB_TOKEN</code>
+                {{end}}
               </td>
             </tr>
             {{end}}
@@ -138,7 +162,11 @@
   </div>
   <div class="col-lg-5 col-xl-4 mt-4 app-repo-index-clones-col">
     <div class="card shadow-sm border-0 h-100 app-brutal-chart-card">
-      <div class="card-header fw-semibold bg-body-secondary border-bottom">{{call .T "index.chart_title"}}</div>
+      <div class="card-header d-flex align-items-center justify-content-between gap-3">
+        <span class="fw-semibold">{{call .T "index.chart_title"}}</span>
+        <button type="button" class="btn app-panel-toggle" data-bs-toggle="collapse" data-bs-target="#index-clones-panel" aria-controls="index-clones-panel" aria-expanded="true" aria-label="Toggle {{call .T "index.chart_title"}}"><span aria-hidden="true">⌃</span></button>
+      </div>
+      <div id="index-clones-panel" class="collapse show">
       <div class="card-body border-bottom py-2 px-3">
         <p class="small text-muted mb-0">{{call .T "index.chart_blurb"}}</p>
       </div>
@@ -177,6 +205,7 @@
         {{else}}
         <p class="text-muted small mb-0">{{call .T "index.chart_empty"}}</p>
         {{end}}
+      </div>
       </div>
     </div>
   </div>

@@ -19,8 +19,11 @@
   <script>
     (() => {
       const saved = localStorage.getItem('gghstats-theme');
-      if (saved === 'light' || saved === 'dark') {
+      if (saved === 'light' || saved === 'dark' || saved === 'midnight') {
         document.documentElement.setAttribute('data-bs-theme', saved);
+      }
+      if (localStorage.getItem('gghstats-sidebar-collapsed') === 'true') {
+        document.documentElement.classList.add('sidebar-collapsed');
       }
     })();
   </script>
@@ -52,33 +55,38 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{{call .T "nav.close"}}"></button>
       </div>
       <div class="offcanvas-body d-flex flex-column p-0">
-        <div class="d-none d-lg-flex align-items-center px-3 py-4 border-bottom border-3 border-dark">
+        <div class="d-none d-lg-flex align-items-center justify-content-between px-3 py-4 app-sidebar-brand-row">
           <a href="/" class="fs-4 fw-bold text-uppercase ls-tight text-decoration-none app-brutal-site-brand" title="{{call .T "nav.home"}}" aria-label="gghstats — {{call .T "nav.home"}}">gghstats</a>
+          <button id="sidebar-toggle" type="button" class="app-sidebar-toggle app-sidebar-tooltip" data-tooltip="{{call .T "nav.collapse_nav"}}" aria-expanded="true" aria-label="{{call .T "nav.collapse_nav"}}"><span aria-hidden="true">‹</span></button>
         </div>
         <nav class="nav flex-column px-2 py-4 gap-1 flex-grow-1" aria-label="Main navigation" data-gghstats-role="nav">
-          <a class="nav-link app-brutal-nav px-3 py-2 text-uppercase fw-semibold small{{if or (eq .PageID "index") (eq .PageID "repo")}} active{{end}}" href="/" title="{{call .T "nav.repositories"}}">{{call .T "nav.repositories"}}</a>
-          {{if .ShowFeatured}}<a class="nav-link app-brutal-nav px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "featured"}} active{{end}}" href="/featured" title="{{call .T "featured.title"}}">{{call .T "nav.featured"}}</a>{{end}}
-          <a class="nav-link app-brutal-nav px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "h2h"}} active{{end}}" href="/h2h" title="{{call .T "h2h.title"}}">{{call .T "nav.h2h"}}</a>
+          <a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if or (eq .PageID "index") (eq .PageID "repo")}} active{{end}}" href="/" data-tooltip="{{call .T "nav.repositories"}}" aria-label="{{call .T "nav.repositories"}}">{{call .T "nav.repositories"}}</a>
+          {{if .ShowFeatured}}<a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "featured"}} active{{end}}" href="/featured" data-tooltip="{{call .T "featured.title"}}" aria-label="{{call .T "featured.title"}}">{{call .T "nav.featured"}}</a>{{end}}
+          <a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "h2h"}} active{{end}}" href="/h2h" data-tooltip="{{call .T "h2h.title"}}" aria-label="{{call .T "h2h.title"}}">{{call .T "nav.h2h"}}</a>
+          <a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "settings"}} active{{end}}" href="/settings" data-tooltip="{{call .T "nav.settings"}}" aria-label="{{call .T "nav.settings"}}">{{call .T "nav.settings"}}</a>
         </nav>
         {{if .LocaleLinks}}
-        <div class="px-3 pb-2">
-          <div class="small text-uppercase fw-semibold app-brutal-muted mb-1">{{call .T "nav.language"}}</div>
-          <div class="d-flex flex-wrap app-brutal-lang-group" role="group" aria-label="{{call .T "nav.language"}}">
+        <div class="px-3 pb-3 app-sidebar-control">
+          <label for="language-select" class="small app-brutal-muted mb-1">{{call .T "nav.language"}}</label>
+          <select id="language-select" class="form-select form-select-sm app-language-select" aria-label="{{call .T "nav.language"}}">
             {{range .LocaleLinks}}
-            <a href="{{.URL}}" class="btn btn-sm app-brutal-btn app-brutal-lang-btn text-uppercase fw-bold{{if .Active}} active{{end}}" lang="{{.Code}}" hreflang="{{.Code}}"{{if .Active}} aria-current="true"{{end}}>{{.Label}}</a>
+            <option value="{{.URL}}" lang="{{.Code}}" hreflang="{{.Code}}"{{if .Active}} selected{{end}}>{{.Label}}</option>
             {{end}}
-          </div>
+          </select>
         </div>
         {{end}}
         <div class="p-3 border-top border-3 border-dark mt-auto">
           {{if .SyncUIEnabled}}
-          <button id="sync-now-btn" type="button" class="btn app-brutal-btn btn-sm w-100 mb-2 text-uppercase fw-bold"{{if .SyncScopeRepo}} data-sync-repo="{{.SyncScopeRepo}}" aria-label="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}"{{else}} aria-label="{{call .T "common.sync_all_aria"}}"{{end}}>{{if .SyncScopeRepo}}{{call .T "common.sync_repo"}}{{else}}{{call .T "common.sync_all"}}{{end}}</button>
+          <button id="sync-now-btn" type="button" class="btn app-brutal-btn app-sidebar-tooltip btn-sm w-100 mb-2 text-uppercase fw-bold"{{if .SyncScopeRepo}} data-sync-repo="{{.SyncScopeRepo}}" data-tooltip="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}" aria-label="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}"{{else}} data-tooltip="{{call .T "common.sync_all_aria"}}" aria-label="{{call .T "common.sync_all_aria"}}"{{end}}>{{if .SyncScopeRepo}}{{call .T "common.sync_repo"}}{{else}}{{call .T "common.sync_all"}}{{end}}</button>
           <p id="sync-status" class="small app-brutal-muted mb-2" aria-live="polite"></p>
           {{end}}
           {{if eq .PageID "index"}}
-          <a href="/export.jsonl{{if .Query}}?q={{urlquery .Query}}{{end}}" class="btn app-brutal-btn btn-sm w-100 mb-2 text-uppercase fw-bold">{{call .T "common.export_jsonl"}}</a>
+          <a href="/export.jsonl{{if .Query}}?q={{urlquery .Query}}{{end}}" class="btn app-brutal-btn app-export-btn app-sidebar-tooltip btn-sm w-100 mb-2 text-uppercase fw-bold" data-tooltip="{{call .T "common.export_jsonl"}}" aria-label="{{call .T "common.export_jsonl"}}">{{call .T "common.export_jsonl"}}</a>
           {{end}}
-          <button id="theme-toggle" type="button" class="btn app-brutal-btn btn-sm w-100 mb-2 text-uppercase fw-bold" aria-label="{{call .T "common.theme"}}">{{call .T "common.theme"}}</button>
+          <button id="theme-toggle" type="button" class="btn app-brutal-btn app-theme-toggle app-sidebar-tooltip btn-sm w-100 mb-2" data-tooltip="{{call .T "common.theme"}}" aria-label="{{call .T "common.theme"}}">
+            <span class="app-theme-icon" aria-hidden="true">◐</span>
+            <span id="theme-toggle-label">{{call .T "common.theme"}}</span>
+          </button>
           <div class="small app-brutal-muted">v{{.Version}}</div>
         </div>
       </div>

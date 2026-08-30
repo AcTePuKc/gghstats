@@ -39,14 +39,16 @@ type localeLink struct {
 }
 
 func localeFromRequest(r *http.Request, cfg Config) string {
-	return i18n.ResolveLocale(r, cfg.DefaultLocale, cfg.EnabledLocales)
+	defaultLocale, _ := effectiveEditableSettings(cfg)
+	return i18n.ResolveLocale(r, defaultLocale.DefaultLocale, cfg.EnabledLocales)
 }
 
 func maybeSetLocaleCookie(w http.ResponseWriter, r *http.Request, cfg Config) {
 	if r.URL.Query().Get("lang") == "" {
 		return
 	}
-	loc := i18n.ResolveLocale(r, cfg.DefaultLocale, cfg.EnabledLocales)
+	defaultSettings, _ := effectiveEditableSettings(cfg)
+	loc := i18n.ResolveLocale(r, defaultSettings.DefaultLocale, cfg.EnabledLocales)
 	http.SetCookie(w, &http.Cookie{
 		Name:     i18n.CookieName,
 		Value:    loc,
@@ -64,6 +66,8 @@ func buildLocaleLinks(r *http.Request, cfg Config, current string) []localeLink 
 		"de":    "DE",
 		"fr":    "FR",
 		"pt-br": "PT",
+		"bg":    "BG",
+		"ru":    "RU",
 	}
 	var links []localeLink
 	for _, code := range cfg.EnabledLocales {
@@ -100,7 +104,8 @@ func marshalJSI18n(bundle *i18n.Bundle, locale string) template.JS {
 func mergeLayoutLocale(r *http.Request, cfg Config, data layoutData) layoutData {
 	loc := localeFromRequest(r, cfg)
 	bundle := i18n.MustLoad()
-	lb := newLocaleBinder(loc, bundle, cfg.CompactNumbers)
+	editable, _ := effectiveEditableSettings(cfg)
+	lb := newLocaleBinder(loc, bundle, editable.CompactNumbers)
 	data.localeBinder = lb
 	data.LocaleLinks = buildLocaleLinks(r, cfg, loc)
 	data.JSI18n = marshalJSI18n(bundle, loc)
@@ -124,7 +129,8 @@ func marshalJSNumberFormat(locale string, compact bool) template.JS {
 
 func bindPageLocale(r *http.Request, cfg Config) localeBinder {
 	loc := localeFromRequest(r, cfg)
-	return newLocaleBinder(loc, i18n.MustLoad(), cfg.CompactNumbers)
+	editable, _ := effectiveEditableSettings(cfg)
+	return newLocaleBinder(loc, i18n.MustLoad(), editable.CompactNumbers)
 }
 
 func jsI18nPayload(bundle *i18n.Bundle, locale string) map[string]string {
@@ -143,10 +149,16 @@ func jsI18nPayload(bundle *i18n.Bundle, locale string) map[string]string {
 		"js.sync_done",
 		"js.token_required",
 		"js.token_save_sync",
+		"js.settings_saved",
+		"js.settings_save_failed",
+		"js.settings_invalid_token",
 		"common.cancel",
 		"common.close_modal",
 		"common.theme_light",
 		"common.theme_dark",
+		"common.theme_midnight",
+		"nav.collapse_nav",
+		"nav.expand_nav",
 		"chart.legend_unique",
 		"chart.legend_count",
 		"chart.legend_clones_count",

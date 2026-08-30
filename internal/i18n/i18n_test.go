@@ -16,6 +16,8 @@ func TestLoadAndKeyParity(t *testing.T) {
 	de := b.Keys("de")
 	fr := b.Keys("fr")
 	pt := b.Keys("pt-br")
+	bg := b.Keys("bg")
+	ru := b.Keys("ru")
 	if len(en) == 0 {
 		t.Fatal("en has no keys")
 	}
@@ -23,6 +25,8 @@ func TestLoadAndKeyParity(t *testing.T) {
 	missingDE := diffKeys(en, de)
 	missingFR := diffKeys(en, fr)
 	missingPT := diffKeys(en, pt)
+	missingBG := diffKeys(en, bg)
+	missingRU := diffKeys(en, ru)
 	if len(missingES) > 0 {
 		t.Errorf("es missing keys: %v", missingES)
 	}
@@ -34,6 +38,12 @@ func TestLoadAndKeyParity(t *testing.T) {
 	}
 	if len(missingPT) > 0 {
 		t.Errorf("pt-br missing keys: %v", missingPT)
+	}
+	if len(missingBG) > 0 {
+		t.Errorf("bg missing keys: %v", missingBG)
+	}
+	if len(missingRU) > 0 {
+		t.Errorf("ru missing keys: %v", missingRU)
 	}
 }
 
@@ -127,7 +137,7 @@ func TestNormalizeLocale(t *testing.T) {
 
 func TestParseEnabledAndDefaultLocales(t *testing.T) {
 	gotDefault := ParseEnabledLocales("")
-	if len(gotDefault) != 5 || gotDefault[3] != "fr" || gotDefault[4] != "pt-br" {
+	if len(gotDefault) != 7 || gotDefault[3] != "fr" || gotDefault[4] != "pt-br" || gotDefault[5] != "bg" || gotDefault[6] != "ru" {
 		t.Fatalf("empty enabled: %v", gotDefault)
 	}
 	got := ParseEnabledLocales(" fr , pt-br ")
@@ -161,6 +171,9 @@ func TestLangAttr(t *testing.T) {
 	}
 	if LangAttr("de") != "de" {
 		t.Fatal("de")
+	}
+	if LangAttr("bg-BG") != "bg" {
+		t.Fatal("bg")
 	}
 	if LangAttr("zz") != "zz" {
 		t.Fatal("default passthrough")
