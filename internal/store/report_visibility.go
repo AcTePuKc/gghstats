@@ -57,9 +57,9 @@ func (s *Store) SetRepoReportPolicy(name, policy string) (bool, error) {
 
 // RepoReportState is the operator-facing stored decision input.
 type RepoReportState struct {
-	Name             string
-	GitHubVisibility string
-	ReportPolicy     string
+	Name             string `json:"name"`
+	GitHubVisibility string `json:"github_visibility"`
+	ReportPolicy     string `json:"report_policy"`
 }
 
 func (s *Store) ListRepoReportStates() ([]RepoReportState, error) {

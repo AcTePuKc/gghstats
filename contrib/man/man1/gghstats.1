@@ -70,7 +70,9 @@ table set (union). No GitHub token required; add/rm/ls are local SQLite ops.
 .TP
 .B repo report
 Manage repository report visibility: \fBrepo report ls\fR lists stored
-GitHub visibility and report policy; \fBrepo report set OWNER/REPO
+GitHub visibility and report policy (optional \fB\-\-json\fR,
+\fB\-\-visibility\fR \fIpublic|private|unknown\fR, \fB\-\-policy\fR
+\fIinherit|include|exclude\fR); \fBrepo report set OWNER/REPO
 inherit|include|exclude\fR changes reporting only. Collection and SQLite
 history continue unchanged. Excluded repositories are absent from reporting
 surfaces; inherit shows public repositories and, with

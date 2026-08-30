@@ -42,7 +42,7 @@ Catalog (gghstats repo / gghstats featured — local SQLite, no GitHub token):
   repo add OWNER/REPO     Pin a repo to the dashboard (FILTER ∪ pins)
   repo rm  OWNER/REPO     Unpin a repo (error if not pinned)
   repo ls                 List pinned repos
-	  repo report ls          List stored GitHub visibility and report policy
+	  repo report ls          List visibility/policy (--json, --visibility, --policy)
 	  repo report set OWNER/REPO inherit|include|exclude
   featured add OWNER/REPO Add a repo to the Featured showcase (editorial; not on /)
   featured rm  OWNER/REPO Remove from the showcase (error if not present)

@@ -465,6 +465,7 @@ gghstats repo add hrodrig/extra-one     # pin into the traffic set
 gghstats featured add hrodrig/awesome-readme   # showcase on /featured
 gghstats repo ls && gghstats featured ls
 gghstats repo report ls
+gghstats repo report ls --json --visibility unknown
 gghstats repo report set hrodrig/extra-one exclude
 ```
 
