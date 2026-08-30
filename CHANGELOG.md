@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - **Locale-aware chart and stats numbers (#22):** Chart.js y-axis ticks and tooltips (index, repo, H2H) mirror `i18n.FormatCount` using the page locale and `GGHSTATS_COMPACT_NUMBERS`. The daily clone statistics panel formats floats with locale separators (`FormatFloat`) and ints via `FormatCount` instead of raw `strconv.FormatFloat`.
+- **JSONL export filename UTC stamp (#23):** `Content-Disposition` uses `gghstats-export-YYYYMMDD-HHMM.jsonl` (UTC) instead of a fixed `gghstats-export.jsonl`.
 
 ## [1.3.0] - 2026-08-24
 
