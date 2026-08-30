@@ -246,39 +246,12 @@ func runServe(args []string) error {
 	if err := seedDemoIfEnabled(db, cfg.Demo); err != nil {
 		return err
 	}
-	initialSyncPending := false
-	if !cfg.Demo && cfg.SyncOnStartup {
-		visibleRepos, err := db.ReportRepoCount(store.ReportVisibility{IncludePrivate: cfg.ReportPrivate})
-		if err != nil {
-			return fmt.Errorf("check initial database state: %w", err)
-		}
-		initialSyncPending = visibleRepos == 0
-	}
-
-	enabledLocales := i18n.EnvEnabledLocales()
-	settingsPath := ""
-	if cfg.DB != ":memory:" {
-		settingsPath = cfg.DB + ".settings.json"
-	}
-	settingsManager, err := server.NewSettingsManager(settingsPath, server.EditableSettings{
-		DefaultLocale:  i18n.EnvDefaultLocale(),
-		CompactNumbers: cfg.CompactNumbers,
-	}, enabledLocales)
+	initialSyncPending, settingsManager, editableSettings, enabledLocales, err := loadEditableRuntimeSettings(cfg, db)
 	if err != nil {
-		return fmt.Errorf("load settings: %w", err)
+		return err
 	}
-	editableSettings := settingsManager.Snapshot()
 
-	var metricsReg *prometheus.Registry
-	var domainMetrics *metrics.Domain
-	if envBool("GGHSTATS_METRICS", true) {
-		metricsReg, domainMetrics = server.NewMetricsRegistry(server.MetricsRegistryConfig{
-			Store:            db,
-			DBPath:           cfg.DB,
-			PerRepoEnabled:   envBool("GGHSTATS_METRICS_PER_REPO", false),
-			ReportVisibility: store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
-		})
-	}
+	metricsReg, domainMetrics := setupMetrics(cfg, db)
 
 	rateLimiter := setupRateLimiter()
 	if rateLimiter != nil {
@@ -297,54 +270,7 @@ func runServe(args []string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	var coord *sync.Coordinator
-	if cfg.Demo {
-		slog.Info("demo mode: GitHub sync and update check disabled")
-	} else {
-		gh := github.NewClient(cfg.GithubToken)
-		applyOptionalGitHubBaseURL(gh)
-		if domainMetrics != nil {
-			gh.SetMetrics(domainMetrics)
-		}
-		syncOpts := sync.Options{
-			IncludePrivate: cfg.IncludePrivate,
-			Filter:         cfg.Filter,
-			SyncStars:      true,
-			Workers:        cfg.SyncWorkers,
-		}
-		coord = sync.NewCoordinator(gh, db, syncOpts)
-		if domainMetrics != nil {
-			coord.SetMetrics(domainMetrics)
-		}
-		if len(alertSenders) > 0 && len(alertRules) > 0 {
-			senders := alertSenders
-			rules := alertRules
-			publicURL := cfg.PublicURL
-			coord.SetAfterSync(func(result sync.RunResult) {
-				reportScope := store.ReportVisibility{IncludePrivate: cfg.ReportPrivate}
-				failed := reportableFailedRepos(db, reportScope, result.FailedRepos)
-				attempted, _ := db.ReportRepoCount(reportScope)
-				snap := alert.SyncSnapshot{
-					// Report alerts must not disclose failures from excluded collection.
-					Success:            result.Success || len(failed) == 0,
-					ReposAttempted:     attempted,
-					ReposFailed:        len(failed),
-					FailedRepos:        failed,
-					Unreachable:        result.Unreachable,
-					RateLimitRemaining: result.RateLimitRemaining,
-				}
-				alert.RunAllRules(ctx, alert.EvalConfig{
-					DB:               db,
-					ReportVisibility: store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
-					Rules:            rules,
-					Senders:          senders,
-					PublicURL:        publicURL,
-				}, snap)
-			})
-			slog.Info(fmt.Sprintf("alerts: %d rule(s) will evaluate after sync", len(rules)))
-		}
-		go startScheduler(ctx, coord, cfg.SyncInterval, cfg.SyncOnStartup)
-	}
+	coord := setupSyncCoordinator(ctx, cfg, db, domainMetrics, alertSenders, alertRules)
 
 	cssAbs, cssQuery := resolveCSSPath()
 
@@ -414,6 +340,96 @@ func runServe(args []string) error {
 	}
 
 	return serveHTTP(ctx, srv, cfg, cancel)
+}
+
+func loadEditableRuntimeSettings(cfg serveConfig, db *store.Store) (bool, *server.SettingsManager, server.EditableSettings, []string, error) {
+	initialSyncPending := false
+	if !cfg.Demo && cfg.SyncOnStartup {
+		visibleRepos, err := db.ReportRepoCount(store.ReportVisibility{IncludePrivate: cfg.ReportPrivate})
+		if err != nil {
+			return false, nil, server.EditableSettings{}, nil, fmt.Errorf("check initial database state: %w", err)
+		}
+		initialSyncPending = visibleRepos == 0
+	}
+
+	enabledLocales := i18n.EnvEnabledLocales()
+	settingsPath := ""
+	if cfg.DB != ":memory:" {
+		settingsPath = cfg.DB + ".settings.json"
+	}
+	settingsManager, err := server.NewSettingsManager(settingsPath, server.EditableSettings{
+		DefaultLocale:  i18n.EnvDefaultLocale(),
+		CompactNumbers: cfg.CompactNumbers,
+	}, enabledLocales)
+	if err != nil {
+		return false, nil, server.EditableSettings{}, nil, fmt.Errorf("load settings: %w", err)
+	}
+	return initialSyncPending, settingsManager, settingsManager.Snapshot(), enabledLocales, nil
+}
+
+func setupMetrics(cfg serveConfig, db *store.Store) (*prometheus.Registry, *metrics.Domain) {
+	if !envBool("GGHSTATS_METRICS", true) {
+		return nil, nil
+	}
+	return server.NewMetricsRegistry(server.MetricsRegistryConfig{
+		Store:            db,
+		DBPath:           cfg.DB,
+		PerRepoEnabled:   envBool("GGHSTATS_METRICS_PER_REPO", false),
+		ReportVisibility: store.ReportVisibility{IncludePrivate: cfg.ReportPrivate},
+	})
+}
+
+func setupSyncCoordinator(ctx context.Context, cfg serveConfig, db *store.Store, domainMetrics *metrics.Domain, alertSenders []alert.Sender, alertRules []alert.RuleSpec) *sync.Coordinator {
+	if cfg.Demo {
+		slog.Info("demo mode: GitHub sync and update check disabled")
+		return nil
+	}
+
+	gh := github.NewClient(cfg.GithubToken)
+	applyOptionalGitHubBaseURL(gh)
+	if domainMetrics != nil {
+		gh.SetMetrics(domainMetrics)
+	}
+	coord := sync.NewCoordinator(gh, db, sync.Options{
+		IncludePrivate: cfg.IncludePrivate,
+		Filter:         cfg.Filter,
+		SyncStars:      true,
+		Workers:        cfg.SyncWorkers,
+	})
+	if domainMetrics != nil {
+		coord.SetMetrics(domainMetrics)
+	}
+	if len(alertSenders) > 0 && len(alertRules) > 0 {
+		configureSyncAlerts(ctx, cfg, db, coord, alertSenders, alertRules)
+	}
+	go startScheduler(ctx, coord, cfg.SyncInterval, cfg.SyncOnStartup)
+	return coord
+}
+
+func configureSyncAlerts(ctx context.Context, cfg serveConfig, db *store.Store, coord *sync.Coordinator, senders []alert.Sender, rules []alert.RuleSpec) {
+	publicURL := cfg.PublicURL
+	coord.SetAfterSync(func(result sync.RunResult) {
+		reportScope := store.ReportVisibility{IncludePrivate: cfg.ReportPrivate}
+		failed := reportableFailedRepos(db, reportScope, result.FailedRepos)
+		attempted, _ := db.ReportRepoCount(reportScope)
+		snap := alert.SyncSnapshot{
+			// Report alerts must not disclose failures from excluded collection.
+			Success:            result.Success || len(failed) == 0,
+			ReposAttempted:     attempted,
+			ReposFailed:        len(failed),
+			FailedRepos:        failed,
+			Unreachable:        result.Unreachable,
+			RateLimitRemaining: result.RateLimitRemaining,
+		}
+		alert.RunAllRules(ctx, alert.EvalConfig{
+			DB:               db,
+			ReportVisibility: reportScope,
+			Rules:            rules,
+			Senders:          senders,
+			PublicURL:        publicURL,
+		}, snap)
+	})
+	slog.Info(fmt.Sprintf("alerts: %d rule(s) will evaluate after sync", len(rules)))
 }
 
 func seedDemoIfEnabled(db *store.Store, enabled bool) error {
