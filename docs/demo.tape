@@ -45,6 +45,14 @@ Type "gghstats backup -h"
 Enter
 Sleep 1500ms
 
+# Report visibility inventory (1.5.0+)
+Type "gghstats repo report -h"
+Enter
+Sleep 1500ms
+Type "gghstats repo report ls"
+Enter
+Sleep 1500ms
+
 # Sample env (truncated for a short GIF)
 Type "gghstats --print-sample-config 2>&1 | head -n 22"
 Enter

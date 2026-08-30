@@ -11,6 +11,14 @@ box that runs `gghstats serve`.
 
 ## Report visibility and privacy boundary
 
+### After upgrading to 1.5.0
+
+Existing databases migrate every repository to `unknown` + `inherit`.
+**Report surfaces stay empty until the next sync** (startup, schedule, UI Sync,
+or `POST /api/v1/sync`). History in SQLite is retained; this is fail-closed by
+design, not data loss. Operator steps:
+[README — Upgrading to 1.5.0](../README.md#upgrading-to-150).
+
 Collection and reporting are deliberately separate. `GGHSTATS_FILTER`, pins,
 manual fetches, and `GGHSTATS_INCLUDE_PRIVATE=true` decide what gghstats may
 collect and retain in SQLite. They do **not** make a repository public in a
@@ -201,6 +209,8 @@ curl -X POST http://127.0.0.1:8080/api/v1/sync   # if API token is set
 | `invalid repo name: expected OWNER/REPO` | You passed a filter expression, `*`, or a bare name. Use `owner/repo`. |
 | Featured card shows no stars / description | Metadata sync has not run yet (or sync is disabled in `--demo`). |
 | Added a repo but `/` or `/featured` does not change | CLI `--db` and `serve` DB differ, the server has not refreshed metadata, or report visibility hides the repo. Check `gghstats repo report ls`. |
+| Dashboard empty right after upgrading to 1.5.0 | Expected fail-closed: rows are `unknown` until the next sync. Trigger sync, then `gghstats repo report ls`. See [Upgrading to 1.5.0](../README.md#upgrading-to-150). |
+| `repo report ls` shows many `unknown` after upgrade | Sync has not classified visibility yet (or GitHub metadata fetch failed). Re-run sync; use `--json --visibility unknown` to list leftovers. |
 
 ---
 

@@ -1,6 +1,6 @@
 # gghstats
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue)](https://github.com/hrodrig/gghstats/releases)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue)](https://github.com/hrodrig/gghstats/releases)
 [![Release](https://img.shields.io/github/v/release/hrodrig/gghstats)](https://github.com/hrodrig/gghstats/releases)
 [![CI](https://github.com/hrodrig/gghstats/actions/workflows/ci.yml/badge.svg)](https://github.com/hrodrig/gghstats/actions)
 [![codecov](https://codecov.io/gh/hrodrig/gghstats/graph/badge.svg)](https://codecov.io/gh/hrodrig/gghstats)
@@ -482,9 +482,11 @@ and reporting alerts; excluded direct requests respond as not found.
 
 This change never deletes collected history. An excluded repository continues
 to sync and remains in SQLite; changing it back to `include` makes its existing
-history available immediately. Existing databases upgrade with visibility set
-to `unknown`, so their repositories remain hidden from reports until a metadata
-sync records public/private visibility or an operator explicitly includes one.
+history available immediately.
+
+**Empty index after upgrade is expected.** Existing databases migrate to
+`unknown` + `inherit`, so **no repository is report-visible until the next
+sync** (or an explicit `include`). See [Upgrading to 1.5.0](#upgrading-to-150).
 
 Full reference — semantics, `--db`/`GGHSTATS_DB`, metadata sync, nav
 hide-when-empty, and troubleshooting — lives in
@@ -606,6 +608,28 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 
 Parent directories are created automatically. **`GGHSTATS_DB` / `--db` always wins.**
 For daemons, set an absolute path.
+
+### Upgrading to 1.5.0
+
+**Fail-closed reporting:** after you deploy **1.5.0**, migration v8 sets every
+existing repository to `github_visibility=unknown` and `report_policy=inherit`.
+Until GitHub visibility is refreshed, **the dashboard, reporting APIs, exports,
+badges, metrics labels, sitemap, Featured, and H2H look empty or 404** — even
+though SQLite still holds all traffic history.
+
+1. **Backup** before upgrade: `gghstats backup --output gghstats.db.pre-1.5.0`
+   (or copy the DB file).
+2. **Deploy** 1.5.0 and restart `serve`.
+3. **Sync** so metadata can classify repos as `public` / `private`: leave
+   `GGHSTATS_SYNC_ON_STARTUP=true` (default), wait for `GGHSTATS_SYNC_INTERVAL`,
+   use the UI Sync button, or `POST /api/v1/sync` when an API token is set.
+4. **Verify:** `gghstats repo report ls` (or
+   `gghstats repo report ls --json --visibility unknown` for leftovers).
+5. **Private repos** you want on reports: set `GGHSTATS_REPORT_PRIVATE=true`
+   and/or `gghstats repo report set OWNER/REPO include`.
+
+Details: [Report visibility](#report-visibility) and
+[`docs/catalog-and-featured.md`](docs/catalog-and-featured.md).
 
 **Upgrading from 0.11.x:** if you relied on the old unset default `./data/gghstats.db`, either set `GGHSTATS_DB` to that path (or an absolute path to the old file) or move/copy the database into the new platform directory. Docker / Compose / systemd / BSD packages that already set `GGHSTATS_DB` are unchanged.
 

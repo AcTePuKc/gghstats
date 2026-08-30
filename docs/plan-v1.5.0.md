@@ -155,6 +155,6 @@ views chart data as JSON for Grafana, Observable, notebooks, BI.
 - [x] Implement V-json (`repo report ls --json` + filters)
 - [x] Implement U-legend (i18n: null gap vs confirmed zero)
 - [x] Implement X-chart (dense dogfood + repo-page download)
-- [ ] Doc checklist re-verify (`GGHSTATS_REPORT_PRIVATE` + `repo report` on all surfaces post-merge)
-- [ ] Operator migration note (README / catalog) polish if gaps remain
-- [ ] `VERSION` 1.5.0 + `make release-check` + merge/tag (user OK)
+- [x] Doc checklist re-verify (`GGHSTATS_REPORT_PRIVATE` + `repo report` on all surfaces post-merge)
+- [x] Operator migration note (README / catalog) polish — fail-closed until next sync
+- [x] `VERSION` 1.5.0 bump on `develop` (release-check + merge/tag still need user OK)
