@@ -129,3 +129,24 @@ func TestTrafficFreshnessUIIsLocalizedWithSingularMissingDay(t *testing.T) {
 		}
 	}
 }
+
+func TestRepoChartGapLegendIsLocalized(t *testing.T) {
+	db := testStore(t)
+	if err := db.UpsertRepoWithVisibility("o/r", "", 0, 0, 0, 0, 0, false, false, "", store.VisibilityPublic); err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{Store: db, DefaultLocale: "es", EnabledLocales: []string{"es"}})
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/o/r?lang=es", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	want := "Los huecos del gráfico significan que GitHub omitió ese día; 0 es un cero confirmado."
+	if !strings.Contains(body, want) {
+		t.Fatalf("missing chart gap legend in %s", body)
+	}
+	if !strings.Contains(body, `data-gghstats-role="chart-gap-legend"`) {
+		t.Fatal("missing chart-gap-legend role")
+	}
+}
