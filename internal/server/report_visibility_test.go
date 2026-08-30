@@ -141,7 +141,7 @@ func featuredVisibilityFixture(t *testing.T) http.Handler {
 	return New(Config{Store: db, APIToken: "token", DisableMetrics: true, PublicURL: "https://stats.example.com"})
 }
 
-func TestFeaturedAPIRespectsReportVisibility(t *testing.T) {
+func TestFeaturedAPIListsCatalogRegardlessOfReportPolicy(t *testing.T) {
 	h := featuredVisibilityFixture(t)
 	apiReq := httptest.NewRequest(http.MethodGet, "/api/v1/featured", nil)
 	apiReq.Header.Set("x-api-token", "token")
@@ -150,11 +150,9 @@ func TestFeaturedAPIRespectsReportVisibility(t *testing.T) {
 	if apiRes.Code != http.StatusOK {
 		t.Fatalf("featured API status=%d body=%s", apiRes.Code, apiRes.Body.String())
 	}
-	if strings.Contains(apiRes.Body.String(), "secret/excluded") || strings.Contains(apiRes.Body.String(), "excluded metadata") {
-		t.Fatalf("featured API leaked excluded repository: %s", apiRes.Body.String())
-	}
-	if !strings.Contains(apiRes.Body.String(), `"total_count":1`) || !strings.Contains(apiRes.Body.String(), "public/visible") {
-		t.Fatalf("featured API did not retain report-visible entry: %s", apiRes.Body.String())
+	body := apiRes.Body.String()
+	if !strings.Contains(body, `"total_count":2`) || !strings.Contains(body, "public/visible") || !strings.Contains(body, "secret/excluded") {
+		t.Fatalf("featured API must list catalog rows, including excluded collected names: %s", body)
 	}
 }
 

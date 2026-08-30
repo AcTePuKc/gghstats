@@ -474,8 +474,8 @@ Scores are **shares 0–100 that sum to 100** (same formula as the HTML H2H page
 ### `GET /api/v1/featured`
 
 Featured showcase list (dogfood for HTML `/featured`). **Metadata only** — no
-traffic clones/views. The list and `total_count` include only report-visible
-entries, so the catalog cannot expose an excluded repository.
+traffic clones/views. The list and `total_count` follow the Featured catalog,
+not report visibility.
 
 | Param | Default | Notes |
 |-------|---------|--------|
