@@ -219,7 +219,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
 	trafficJSON := optionalAPITokenMiddleware(cfg.APIToken, handleRepoTrafficJSONExport(cfg))
 	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg))
-	mux.HandleFunc("GET /settings", handleSettingsPage(cfg, tmpl))
+	mux.HandleFunc("GET /settings", settingsMiddleware(cfg, handleSettingsPage(cfg, tmpl)))
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
 	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
 	htmlNotFound := func(w http.ResponseWriter, r *http.Request) {

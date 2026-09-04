@@ -1,0 +1,164 @@
+/*
+ * gghstats example theme — soft dashboard.
+ *
+ * This is optional and is not loaded by the binary. Copy it to a runtime
+ * directory, set GGHSTATS_CUSTOM_CSS to its path, and restart gghstats serve.
+ * The built-in neo-brutalist app.css remains the default for all operators.
+ */
+
+body.app-brutalist {
+  --brutal-text: #172033;
+  --brutal-paper: #f4f6fa;
+  --brutal-surface: #ffffff;
+  --brutal-elevated: #ffffff;
+  --brutal-border-ink: #d0d5dd;
+  --brutal-shadow-core: rgba(16, 24, 40, 0.1);
+  --brutal-accent: #3157d5;
+  --brutal-accent-2: #0e7490;
+  --brutal-muted: #667085;
+  --brutal-chart-well: #f8fafc;
+  --brutal-chart-rim: #e4e7ec;
+  --brutal-nav-active-bg: #283b66;
+  --brutal-nav-active-fg: #ffffff;
+  --brutal-border: 1px solid var(--brutal-border-ink);
+  --brutal-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.03);
+  --brutal-primary-shadow: rgba(49, 87, 213, 0.2);
+  --brutal-btn-shift-hover: 0;
+  --brutal-btn-shift-active: 0;
+  --brutal-success: #16805b;
+  --brutal-warning: #b54708;
+  --brutal-search-cta: #3157d5;
+  --brutal-search-cta-shadow: rgba(49, 87, 213, 0.2);
+  background-color: var(--brutal-paper) !important;
+  color: var(--brutal-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: normal;
+}
+
+html[data-bs-theme="dark"] body.app-brutalist {
+  --brutal-text: #edf2f7;
+  --brutal-paper: #0b1220;
+  --brutal-surface: #111b2e;
+  --brutal-elevated: #16233a;
+  --brutal-border-ink: #3a4c6c;
+  --brutal-shadow-core: rgba(0, 0, 0, 0.28);
+  --brutal-accent: #8ca7ff;
+  --brutal-accent-2: #67d4e8;
+  --brutal-muted: #a9b6c9;
+  --brutal-chart-well: #16233a;
+  --brutal-chart-rim: #263651;
+  --brutal-nav-active-bg: #263d72;
+  --brutal-nav-active-fg: #ffffff;
+  --brutal-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12);
+  --brutal-primary-shadow: rgba(0, 0, 0, 0.25);
+  --brutal-success: #61d6a2;
+  --brutal-warning: #f6c177;
+  --brutal-search-cta: #6f8fff;
+}
+
+html[data-bs-theme="midnight"] body.app-brutalist {
+  --brutal-text: #f3f7fb;
+  --brutal-paper: #030508;
+  --brutal-surface: #080d14;
+  --brutal-elevated: #0d1520;
+  --brutal-border-ink: #30445e;
+  --brutal-shadow-core: rgba(0, 0, 0, 0.45);
+  --brutal-accent: #65a4ff;
+  --brutal-accent-2: #70d8e8;
+  --brutal-muted: #9aaabd;
+  --brutal-chart-well: #0d1520;
+  --brutal-chart-rim: #1d2a3b;
+  --brutal-nav-active-bg: #12305f;
+  --brutal-nav-active-fg: #ffffff;
+  --brutal-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+  --brutal-primary-shadow: rgba(0, 0, 0, 0.4);
+  --brutal-success: #6ee7b7;
+  --brutal-warning: #f8ca8b;
+  --brutal-search-cta: #4f8df7;
+}
+
+body.app-brutalist .app-brutal-topbar,
+body.app-brutalist .app-brutal-header,
+body.app-brutalist .app-brutal-footer,
+body.app-brutalist .app-brutal-main {
+  background: var(--brutal-surface) !important;
+  border-color: var(--brutal-border-ink) !important;
+}
+
+body.app-brutalist .app-brutal-content { background: var(--brutal-paper) !important; }
+body.app-brutalist .app-brutal-sidebar { background: #101828 !important; box-shadow: 4px 0 18px rgba(16, 24, 40, 0.08) !important; }
+body.app-brutalist .app-brutal-header h1 { letter-spacing: -0.025em; text-transform: none; }
+
+body.app-brutalist .app-brutal-nav {
+  border: 1px solid transparent;
+  border-radius: 9px !important;
+  color: #98a2b3 !important;
+  text-transform: none;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+body.app-brutalist .app-brutal-nav:hover { color: #ffffff !important; background: rgba(255, 255, 255, 0.07) !important; }
+body.app-brutalist .app-brutal-nav.active { color: #ffffff !important; background: #283b66 !important; border-color: rgba(255, 255, 255, 0.08); }
+
+body.app-brutalist .card,
+body.app-brutalist .app-brutal-error-panel {
+  border: 1px solid var(--brutal-border-ink) !important;
+  border-radius: 14px !important;
+  background: var(--brutal-elevated) !important;
+  box-shadow: var(--brutal-shadow) !important;
+}
+
+body.app-brutalist .card-header {
+  border-bottom: 1px solid var(--brutal-border-ink) !important;
+  border-radius: 14px 14px 0 0 !important;
+  background: var(--brutal-chart-well) !important;
+}
+
+body.app-brutalist .app-brutal-chart-well {
+  border: 1px solid var(--brutal-chart-rim) !important;
+  border-radius: 10px;
+  background: var(--brutal-chart-well) !important;
+  box-shadow: none;
+}
+
+body.app-brutalist .app-brutal-btn,
+body.app-brutalist .app-panel-toggle {
+  border: 1px solid var(--brutal-border-ink) !important;
+  border-radius: 10px !important;
+  background: var(--brutal-elevated) !important;
+  color: var(--brutal-text) !important;
+  box-shadow: none !important;
+}
+
+body.app-brutalist .app-brutal-btn:hover,
+body.app-brutalist .app-panel-toggle:hover {
+  background: var(--brutal-chart-well) !important;
+  border-color: var(--brutal-accent) !important;
+  transform: none;
+}
+
+body.app-brutalist .form-control,
+body.app-brutalist .form-select {
+  border: 1px solid var(--brutal-border-ink) !important;
+  border-radius: 10px !important;
+  background: var(--brutal-elevated) !important;
+  color: var(--brutal-text) !important;
+}
+
+body.app-brutalist .table {
+  --bs-table-color: var(--brutal-text);
+  --bs-table-bg: var(--brutal-elevated);
+  --bs-table-border-color: var(--brutal-border-ink);
+}
+
+body.app-brutalist .table > :not(caption) > * > * { color: var(--brutal-text); background-color: var(--brutal-elevated); }
+body.app-brutalist .table thead th { color: var(--brutal-muted) !important; background: var(--brutal-chart-well) !important; }
+body.app-brutalist .table-hover > tbody > tr:hover > * { background: color-mix(in srgb, var(--brutal-accent) 10%, var(--brutal-elevated)); }
+body.app-brutalist .app-brutal-search-panel { background: var(--brutal-chart-well) !important; border-color: var(--brutal-border-ink) !important; }
+body.app-brutalist .app-settings-row { border-bottom-color: var(--brutal-border-ink); }
+
+@media (max-width: 575.98px) {
+  body.app-brutalist .table { min-width: 720px; }
+  body.app-brutalist .app-settings-row { grid-template-columns: 1fr; gap: 0.25rem; }
+  body.app-brutalist .app-settings-row dd { text-align: left; }
+}

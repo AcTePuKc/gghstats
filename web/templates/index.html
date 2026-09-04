@@ -67,7 +67,7 @@
 </div>
 
 <div class="row g-3 align-items-start">
-  <div class="col-lg-7 col-xl-8">
+  <div class="col-12 app-repo-index-table-col">
     <div class="card shadow-sm border-0 h-100">
       {{if and .Repos (gt .Total .PerPage)}}
       <div class="card-body border-bottom py-2 app-repo-pagination-bar">
@@ -160,7 +160,7 @@
       {{end}}
     </div>
   </div>
-  <div class="col-lg-5 col-xl-4 mt-4 app-repo-index-clones-col">
+  <div class="col-12 app-repo-index-clones-col">
     <div class="card shadow-sm border-0 h-100 app-brutal-chart-card">
       <div class="card-header d-flex align-items-center justify-content-between gap-3">
         <span class="fw-semibold">{{call .T "index.chart_title"}}</span>

@@ -50,6 +50,11 @@ func (t *TrustedProxies) ContainsIP(ip net.IP) bool {
 	return false
 }
 
+// Configured reports whether at least one valid trusted proxy network exists.
+func (t *TrustedProxies) Configured() bool {
+	return !t.empty()
+}
+
 func (t *TrustedProxies) empty() bool {
 	return t == nil || len(t.nets) == 0
 }

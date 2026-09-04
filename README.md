@@ -889,7 +889,7 @@ The shipped look is **neo-brutalist** on purpose—not every user or org wants h
 
 **Local try-out** (no rebuild):
 
-1. Copy one of the **five official example themes** from [`contrib/themes/`](contrib/themes/README.md) (for a stock-Bootstrap feel use **`example-bootstrap-plain.css`**; or write your own CSS targeting `body.app-brutalist` and `html[data-bs-theme="dark"] body.app-brutalist`).
+1. Copy one of the **six official example themes** from [`contrib/themes/`](contrib/themes/README.md) (for the soft dashboard experiment use **`example-soft-dashboard.css`**; for a stock-Bootstrap feel use **`example-bootstrap-plain.css`**; or write your own CSS targeting `body.app-brutalist` and `html[data-bs-theme="dark"] body.app-brutalist`).
 2. Set **`GGHSTATS_CUSTOM_CSS`** to the file path and restart **`gghstats serve`**. The layout adds `<link href="/theme/custom.css?…">` after `/static/app.css`.
 
 **Bootstrap-plain example** ([`example-bootstrap-plain.css`](contrib/themes/example-bootstrap-plain.css) with `GGHSTATS_CUSTOM_CSS`): repository index in light mode — closer to stock Bootstrap (sans-serif, thin borders, no offset shadows):

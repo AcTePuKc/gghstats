@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,30 +20,37 @@ import (
 // on the unauthenticated dashboard. Never add tokens, paths, raw filters, or
 // arbitrary proxy/alert configuration here.
 type SettingsSnapshot struct {
-	RuntimeMode           string
-	Host                  string
-	Port                  string
-	DatabaseReady         bool
-	GithubTokenConfigured bool
-	APITokenConfigured    bool
-	FilterAll             bool
-	IncludePrivate        bool
-	ReportPrivate         bool
-	SyncInterval          string
-	SyncOnStartup         bool
-	SyncWorkers           int
-	SyncAvailable         bool
-	BadgePublic           bool
-	MetricsEnabled        bool
-	RateLimitEnabled      bool
-	APIOnly               bool
-	CompactNumbers        bool
-	DefaultLocale         string
-	EnabledLocales        []string
-	AdminProtection       bool
-	Editable              bool
-	Persisted             bool
-	LocalOnly             bool
+	RuntimeMode              string
+	Host                     string
+	Port                     string
+	DatabaseReady            bool
+	GithubTokenConfigured    bool
+	APITokenConfigured       bool
+	FilterAll                bool
+	IncludePrivate           bool
+	ReportPrivate            bool
+	SyncInterval             string
+	SyncOnStartup            bool
+	SyncWorkers              int
+	SyncAvailable            bool
+	BadgePublic              bool
+	MetricsEnabled           bool
+	RateLimitEnabled         bool
+	WhitelistEnabled         bool
+	TrustedProxiesConfigured bool
+	CORSConfigured           bool
+	CSPEnforced              bool
+	CustomCSSConfigured      bool
+	ReverseProxyConfigured   bool
+	AlertsConfigured         bool
+	APIOnly                  bool
+	CompactNumbers           bool
+	DefaultLocale            string
+	EnabledLocales           []string
+	AdminProtection          bool
+	Editable                 bool
+	Persisted                bool
+	LocalOnly                bool
 }
 
 // EditableSettings is deliberately limited to presentation preferences. It
@@ -246,12 +254,23 @@ func settingsMiddleware(cfg Config, next http.HandlerFunc) http.HandlerFunc {
 			next(w, r)
 			return
 		}
-		if cfg.LocalOnlySettings {
+		if cfg.LocalOnlySettings && requestIsLoopback(r) {
 			next(w, r)
 			return
 		}
 		http.NotFound(w, r)
 	}
+}
+
+// requestIsLoopback checks the connected peer, not forwarded headers. A
+// forwarded header is untrusted and must not grant access to Settings.
+func requestIsLoopback(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err != nil {
+		host = strings.Trim(strings.TrimSpace(r.RemoteAddr), "[]")
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func handleSettingsUpdate(cfg Config) http.HandlerFunc {

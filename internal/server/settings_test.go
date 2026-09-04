@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestSettingsPageIsReadOnlyAndRedacted(t *testing.T) {
+func TestSettingsPageRequiresAPITokenAndIsRedacted(t *testing.T) {
 	db := testStore(t)
 	h := New(Config{
 		Store:          db,
@@ -40,6 +40,14 @@ func TestSettingsPageIsReadOnlyAndRedacted(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/settings", nil)
 	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("missing token status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/settings", nil)
+	req.Header.Set("x-api-token", "api-secret-must-not-render")
+	w = httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -130,6 +138,7 @@ func TestSettingsUpdateAllowsSafePreferencesOnLoopbackWithoutToken(t *testing.T)
 		DisableMetrics:    true,
 	})
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings", bytes.NewBufferString(`{"compact_numbers":true,"default_locale":"de"}`))
+	req.RemoteAddr = "127.0.0.1:12345"
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -141,6 +150,7 @@ func TestSettingsUpdateAllowsSafePreferencesOnLoopbackWithoutToken(t *testing.T)
 		t.Fatalf("updated values = %+v", values)
 	}
 	get := httptest.NewRequest(http.MethodGet, "/settings?lang=en", nil)
+	get.RemoteAddr = "[::1]:12345"
 	page := httptest.NewRecorder()
 	h.ServeHTTP(page, get)
 	if page.Code != http.StatusOK {
@@ -164,5 +174,30 @@ func TestSettingsUpdateIsUnavailableWithoutTokenOnNonLoopback(t *testing.T) {
 	h.ServeHTTP(w, req)
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("unprotected remote update status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestSettingsRejectsNonLoopbackRequestsWhenLocalOnly(t *testing.T) {
+	db := testStore(t)
+	manager, err := NewSettingsManager("", EditableSettings{DefaultLocale: "en"}, []string{"en"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := New(Config{Store: db, SettingsManager: manager, LocalOnlySettings: true, DisableMetrics: true})
+
+	get := httptest.NewRequest(http.MethodGet, "/settings", nil)
+	get.RemoteAddr = "192.0.2.10:12345"
+	getWriter := httptest.NewRecorder()
+	h.ServeHTTP(getWriter, get)
+	if getWriter.Code != http.StatusNotFound {
+		t.Fatalf("non-loopback GET status = %d, want %d", getWriter.Code, http.StatusNotFound)
+	}
+
+	post := httptest.NewRequest(http.MethodPost, "/api/v1/settings", bytes.NewBufferString(`{"compact_numbers":true}`))
+	post.RemoteAddr = "192.0.2.10:12345"
+	postWriter := httptest.NewRecorder()
+	h.ServeHTTP(postWriter, post)
+	if postWriter.Code != http.StatusNotFound {
+		t.Fatalf("non-loopback POST status = %d, want %d", postWriter.Code, http.StatusNotFound)
 	}
 }
