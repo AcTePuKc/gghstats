@@ -1,6 +1,10 @@
 package server
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -9,8 +13,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hrodrig/gghstats/internal/i18n"
 	"github.com/hrodrig/gghstats/internal/version"
@@ -52,6 +58,12 @@ type SettingsSnapshot struct {
 	Persisted                bool
 	LocalOnly                bool
 }
+
+const (
+	settingsSessionCookieName = "gghstats-settings-session"
+	settingsSessionPurpose    = "gghstats/settings-session/v1:"
+	settingsSessionTTL        = 8 * time.Hour
+)
 
 // EditableSettings is deliberately limited to presentation preferences. It
 // must not grow to include credentials, paths, networking, collection scope,
@@ -217,6 +229,10 @@ type settingsPageData struct {
 	Settings SettingsSnapshot
 }
 
+type settingsAuthPageData struct {
+	localeBinder
+}
+
 func handleSettingsPage(cfg Config, tmpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lb := bindPageLocale(r, cfg)
@@ -244,21 +260,109 @@ func handleSettingsPage(cfg Config, tmpl *template.Template) http.HandlerFunc {
 	}
 }
 
+func handleSettingsRoute(cfg Config, tmpl *template.Template) http.HandlerFunc {
+	page := handleSettingsPage(cfg, tmpl)
+	return func(w http.ResponseWriter, r *http.Request) {
+		if settingsRequestAuthorized(cfg, r) {
+			page(w, r)
+			return
+		}
+		if cfg.APIToken == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		lb := bindPageLocale(r, cfg)
+		content := executeTemplate(tmpl, "settings_auth", settingsAuthPageData{localeBinder: lb})
+		renderLayoutStatus(w, r, tmpl, cfg, layoutData{
+			Title:       lb.T("settings.title"),
+			PageID:      "settings",
+			Version:     version.Version,
+			Breadcrumbs: []breadcrumb{{Label: lb.T("nav.home"), URL: "/"}, {Label: lb.T("settings.title"), URL: ""}},
+			Content:     content,
+		}, http.StatusUnauthorized)
+	}
+}
+
+func handleSettingsSession(cfg Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if cfg.APIToken == "" {
+			http.NotFound(w, r)
+			return
+		}
+		expires := time.Now().UTC().Add(settingsSessionTTL)
+		value, err := newSettingsSessionValue(cfg.APIToken, expires)
+		if err != nil {
+			http.Error(w, `{"error":"session_unavailable"}`, http.StatusInternalServerError)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name:     settingsSessionCookieName,
+			Value:    value,
+			Path:     "/",
+			Expires:  expires,
+			MaxAge:   int(settingsSessionTTL / time.Second),
+			HttpOnly: true,
+			Secure:   requestIsHTTPS(r),
+			SameSite: http.SameSiteLaxMode,
+		})
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "expires_at": expires.Format(time.RFC3339)})
+	}
+}
+
+func newSettingsSessionValue(token string, expires time.Time) (string, error) {
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
+	}
+	payload := strconv.FormatInt(expires.Unix(), 10) + "." + hex.EncodeToString(nonce)
+	mac := hmac.New(sha256.New, []byte(token))
+	_, _ = mac.Write([]byte(settingsSessionPurpose + payload))
+	return payload + "." + hex.EncodeToString(mac.Sum(nil)), nil
+}
+
+func validSettingsSession(r *http.Request, token string, now time.Time) bool {
+	cookie, err := r.Cookie(settingsSessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return false
+	}
+	parts := strings.Split(cookie.Value, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	expiresUnix, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || now.UTC().Unix() >= expiresUnix {
+		return false
+	}
+	provided, err := hex.DecodeString(parts[2])
+	if err != nil {
+		return false
+	}
+	mac := hmac.New(sha256.New, []byte(token))
+	_, _ = mac.Write([]byte(settingsSessionPurpose + parts[0] + "." + parts[1]))
+	return hmac.Equal(provided, mac.Sum(nil))
+}
+
+func settingsRequestAuthorized(cfg Config, r *http.Request) bool {
+	if cfg.APIToken != "" {
+		return r.Header.Get("x-api-token") == cfg.APIToken || validSettingsSession(r, cfg.APIToken, time.Now())
+	}
+	return cfg.LocalOnlySettings && requestIsLoopback(r)
+}
+
 func settingsMiddleware(cfg Config, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if settingsRequestAuthorized(cfg, r) {
+			next(w, r)
+			return
+		}
 		if cfg.APIToken != "" {
-			if r.Header.Get("x-api-token") != cfg.APIToken {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-				return
-			}
-			next(w, r)
-			return
+			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		} else {
+			http.NotFound(w, r)
 		}
-		if cfg.LocalOnlySettings && requestIsLoopback(r) {
-			next(w, r)
-			return
-		}
-		http.NotFound(w, r)
 	}
 }
 

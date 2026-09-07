@@ -63,7 +63,7 @@
           <a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if or (eq .PageID "index") (eq .PageID "repo")}} active{{end}}" href="/" data-tooltip="{{call .T "nav.repositories"}}" aria-label="{{call .T "nav.repositories"}}">{{call .T "nav.repositories"}}</a>
           {{if .ShowFeatured}}<a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "featured"}} active{{end}}" href="/featured" data-tooltip="{{call .T "featured.title"}}" aria-label="{{call .T "featured.title"}}">{{call .T "nav.featured"}}</a>{{end}}
           <a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "h2h"}} active{{end}}" href="/h2h" data-tooltip="{{call .T "h2h.title"}}" aria-label="{{call .T "h2h.title"}}">{{call .T "nav.h2h"}}</a>
-          <a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "settings"}} active{{end}}" href="/settings" data-tooltip="{{call .T "nav.settings"}}" aria-label="{{call .T "nav.settings"}}">{{call .T "nav.settings"}}</a>
+          {{if .SettingsUIEnabled}}<a class="nav-link app-brutal-nav app-sidebar-tooltip px-3 py-2 text-uppercase fw-semibold small{{if eq .PageID "settings"}} active{{end}}" href="/settings" data-gghstats-settings-link="true"{{if .SettingsTokenRequired}} data-settings-auth="token"{{end}} data-tooltip="{{call .T "nav.settings"}}" aria-label="{{call .T "nav.settings"}}">{{call .T "nav.settings"}}</a>{{end}}
         </nav>
         {{if .LocaleLinks}}
         <div class="px-3 pb-3 app-sidebar-control">
@@ -140,7 +140,7 @@
     </div>
   </div>
 
-  {{if .SyncUIEnabled}}
+  {{if or .SyncUIEnabled .SettingsTokenRequired}}
   <div class="modal fade" id="sync-token-modal" tabindex="-1" aria-labelledby="sync-token-modal-label" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content app-brutal-modal border-3 border-dark rounded-0">

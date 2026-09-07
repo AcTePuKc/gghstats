@@ -202,6 +202,9 @@ func mountAPIRoutes(mux *http.ServeMux, cfg Config) {
 	if cfg.SettingsManager != nil && (cfg.APIToken != "" || cfg.LocalOnlySettings) {
 		mux.HandleFunc("POST /api/v1/settings", settingsMiddleware(cfg, handleSettingsUpdate(cfg)))
 	}
+	if cfg.APIToken != "" {
+		mux.HandleFunc("POST /api/v1/settings/session", apiMiddleware(cfg.APIToken, handleSettingsSession(cfg)))
+	}
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		mux.HandleFunc("GET /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStatus(cfg)))
 		mux.HandleFunc("POST /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStart(cfg)))
@@ -219,7 +222,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
 	trafficJSON := optionalAPITokenMiddleware(cfg.APIToken, handleRepoTrafficJSONExport(cfg))
 	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg))
-	mux.HandleFunc("GET /settings", settingsMiddleware(cfg, handleSettingsPage(cfg, tmpl)))
+	mux.HandleFunc("GET /settings", handleSettingsRoute(cfg, tmpl))
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
 	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
 	htmlNotFound := func(w http.ResponseWriter, r *http.Request) {
@@ -448,6 +451,10 @@ type layoutData struct {
 	SyncUIEnabled bool
 	// SyncScopeRepo when set scopes the sidebar sync to this owner/repo (repo detail pages).
 	SyncScopeRepo string
+	// SettingsUIEnabled controls whether the Settings link is available in this deployment.
+	SettingsUIEnabled bool
+	// SettingsTokenRequired marks Settings links that need the browser token session flow.
+	SettingsTokenRequired bool
 	// ShowFeatured shows the "Featured" nav link (hidden when the showcase is empty).
 	ShowFeatured bool
 	// CanonicalURL is the preferred indexing URL (no lang/sort/pagination params on index).
@@ -747,8 +754,9 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		editable, _ := effectiveEditableSettings(cfg)
 		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(
-			db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), cfg.CompactNumbers,
+			db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), editable.CompactNumbers,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1015,6 +1023,8 @@ func renderLayoutStatus(w http.ResponseWriter, r *http.Request, tmpl *template.T
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		data.SyncUIEnabled = true
 	}
+	data.SettingsUIEnabled = cfg.APIToken != "" || cfg.LocalOnlySettings
+	data.SettingsTokenRequired = cfg.APIToken != ""
 	if cfg.Store != nil {
 		if n, err := cfg.Store.FeaturedCount(); err == nil && n > 0 {
 			data.ShowFeatured = true

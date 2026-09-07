@@ -874,6 +874,57 @@ function requestSyncTokenModal({ invalid = false } = {}) {
   });
 }
 
+async function establishSettingsSession(token) {
+  if (!token) return false;
+  try {
+    const res = await fetch('/api/v1/settings/session', {
+      method: 'POST',
+      headers: { 'x-api-token': token }
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function obtainSettingsSession() {
+  let token = syncApiToken();
+  if (token && await establishSettingsSession(token)) {
+    return token;
+  }
+  if (token) sessionStorage.removeItem(SYNC_TOKEN_KEY);
+
+  token = await requestSyncTokenModal();
+  if (!token) return null;
+  if (await establishSettingsSession(token)) {
+    sessionStorage.setItem(SYNC_TOKEN_KEY, token);
+    return token;
+  }
+
+  const retry = await requestSyncTokenModal({ invalid: true });
+  if (!retry || !(await establishSettingsSession(retry))) return null;
+  sessionStorage.setItem(SYNC_TOKEN_KEY, retry);
+  return retry;
+}
+
+function initSettingsAccess() {
+  const links = document.querySelectorAll('[data-gghstats-settings-link][data-settings-auth="token"]');
+  const start = document.querySelector('[data-settings-auth-start]');
+  const openSettings = async (event, target) => {
+    event?.preventDefault();
+    if (await obtainSettingsSession()) {
+      window.location.assign(target);
+    }
+  };
+
+  links.forEach(link => {
+    link.addEventListener('click', event => openSettings(event, link.href));
+  });
+  if (start) {
+    start.addEventListener('click', event => openSettings(event, window.location.href));
+  }
+}
+
 function initSyncControl() {
   const btn = document.getElementById('sync-now-btn');
   const statusEl = document.getElementById('sync-status');
@@ -1038,20 +1089,12 @@ function initSettingsForm() {
     if (!select || !compact) return;
 
     const localOnly = form.dataset.localOnly === 'true';
-    let token = '';
-    if (!localOnly) {
-      token = syncApiToken();
-      if (!token) {
-        token = await requestSyncTokenModal();
-        if (!token) return;
-        sessionStorage.setItem(SYNC_TOKEN_KEY, token);
-      }
-    }
+    let token = localOnly ? '' : syncApiToken();
 
     if (submit) submit.disabled = true;
     statusEl.textContent = '';
     try {
-      const res = await fetch('/api/v1/settings', {
+      const save = () => fetch('/api/v1/settings', {
         method: 'POST',
         headers: Object.assign({ 'content-type': 'application/json' }, token ? { 'x-api-token': token } : {}),
         body: JSON.stringify({
@@ -1059,6 +1102,11 @@ function initSettingsForm() {
           compact_numbers: compact.checked
         })
       });
+      let res = await save();
+      if (res.status === 401 && !localOnly) {
+        token = await obtainSettingsSession();
+        if (token) res = await save();
+      }
       if (res.status === 401) {
         sessionStorage.removeItem(SYNC_TOKEN_KEY);
         statusEl.textContent = uiT('js.settings_invalid_token');
@@ -1102,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSyncControl();
   initTrafficJSONDownload();
   initSettingsForm();
+  initSettingsAccess();
   initInitialSyncRefresh();
 });
 

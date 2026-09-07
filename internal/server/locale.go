@@ -61,13 +61,13 @@ func maybeSetLocaleCookie(w http.ResponseWriter, r *http.Request, cfg Config) {
 
 func buildLocaleLinks(r *http.Request, cfg Config, current string) []localeLink {
 	labels := map[string]string{
-		"en":    "EN",
-		"es":    "ES",
-		"de":    "DE",
-		"fr":    "FR",
-		"pt-br": "PT",
-		"bg":    "BG",
-		"ru":    "RU",
+		"en":    "English",
+		"es":    "Español",
+		"de":    "Deutsch",
+		"fr":    "Français",
+		"pt-br": "Português (Brasil)",
+		"bg":    "Български",
+		"ru":    "Русский",
 	}
 	var links []localeLink
 	for _, code := range cfg.EnabledLocales {
@@ -109,7 +109,7 @@ func mergeLayoutLocale(r *http.Request, cfg Config, data layoutData) layoutData 
 	data.localeBinder = lb
 	data.LocaleLinks = buildLocaleLinks(r, cfg, loc)
 	data.JSI18n = marshalJSI18n(bundle, loc)
-	data.JSNumberFormat = marshalJSNumberFormat(loc, cfg.CompactNumbers)
+	data.JSNumberFormat = marshalJSNumberFormat(loc, editable.CompactNumbers)
 	if data.PageID == "" && len(data.Breadcrumbs) == 0 {
 		data.PageID = "index"
 	}

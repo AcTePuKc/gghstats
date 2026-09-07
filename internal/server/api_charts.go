@@ -16,7 +16,8 @@ func handleAPIIndexClonesChart(cfg Config) http.HandlerFunc {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return
 		}
-		count, js, _, _, err := buildIndexListClonesChartPayload(db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), cfg.CompactNumbers)
+		editable, _ := effectiveEditableSettings(cfg)
+		count, js, _, _, err := buildIndexListClonesChartPayload(db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), editable.CompactNumbers)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "database error")
 			return

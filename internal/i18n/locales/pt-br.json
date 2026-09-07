@@ -116,6 +116,7 @@
     "editable_locked": "A edição fica bloqueada até GGHSTATS_API_TOKEN ser configurado. O tema e a barra lateral locais do navegador continuam disponíveis.",
     "admin_protected": "Protegido pela API",
     "admin_required": "Token de administrador necessário",
+    "auth_continue": "Continuar para as configurações",
     "save": "Salvar preferências",
     "boundary_title": "Limite de segurança",
     "boundary_help": "Valores mantidos deliberadamente fora da interface web.",

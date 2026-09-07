@@ -598,6 +598,19 @@ html[data-bs-theme="midnight"] .app-brutalist .navbar-toggler-icon {
   filter: invert(1);
 }
 
+html[data-bs-theme="midnight"] .app-brutalist .app-brutal-breadcrumb .breadcrumb-item {
+  color: var(--brutal-text) !important;
+}
+
+html[data-bs-theme="midnight"] .app-brutalist .app-brutal-breadcrumb a {
+  color: var(--brutal-accent) !important;
+}
+
+html[data-bs-theme="midnight"] .app-brutalist .app-brutal-breadcrumb a:hover,
+html[data-bs-theme="midnight"] .app-brutalist .app-brutal-breadcrumb a:focus-visible {
+  color: var(--brutal-accent-2) !important;
+}
+
 .app-shell,
 .app-brutal-main {
   min-width: 0;

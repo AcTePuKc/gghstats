@@ -116,6 +116,7 @@
     "editable_locked": "Die Bearbeitung ist gesperrt, bis GGHSTATS_API_TOKEN konfiguriert ist. Browserlokale Design- und Seitenleisteneinstellungen bleiben verfügbar.",
     "admin_protected": "API-geschützt",
     "admin_required": "Admin-Token erforderlich",
+    "auth_continue": "Zu den Einstellungen",
     "save": "Einstellungen speichern",
     "boundary_title": "Sicherheitsgrenze",
     "boundary_help": "Werte, die bewusst außerhalb der Weboberfläche bleiben.",

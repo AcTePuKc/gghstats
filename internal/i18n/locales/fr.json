@@ -116,6 +116,7 @@
     "editable_locked": "La modification est verrouillée tant que GGHSTATS_API_TOKEN n’est pas configuré. Le thème et la barre latérale propres au navigateur restent disponibles.",
     "admin_protected": "Protégé par l’API",
     "admin_required": "Jeton administrateur requis",
+    "auth_continue": "Continuer vers les paramètres",
     "save": "Enregistrer les préférences",
     "boundary_title": "Limite de sécurité",
     "boundary_help": "Valeurs volontairement conservées en dehors de l’interface web.",

@@ -116,6 +116,7 @@
     "editable_locked": "Editing is locked until GGHSTATS_API_TOKEN is configured. Browser-local theme and sidebar preferences remain available.",
     "admin_protected": "API protected",
     "admin_required": "Admin token required",
+    "auth_continue": "Continue to settings",
     "save": "Save preferences",
     "boundary_title": "Safety boundary",
     "boundary_help": "Values deliberately kept outside the web UI.",
