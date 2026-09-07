@@ -263,6 +263,50 @@ html[data-bs-theme="dark"] .app-brutalist .app-brutal-error-code {
   font-weight: 700;
 }
 
+.app-traffic-freshness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.app-traffic-freshness-label {
+  flex: 0 0 auto;
+}
+
+.app-traffic-freshness-metric {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem;
+  max-width: 100%;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--brutal-chart-rim);
+  background: var(--brutal-chart-well);
+  overflow-wrap: anywhere;
+}
+
+.app-traffic-freshness-views {
+  border-inline-start: 0.25rem solid var(--brutal-accent);
+}
+
+.app-traffic-freshness-clones {
+  border-inline-start: 0.25rem solid var(--brutal-accent-2);
+}
+
+.app-traffic-freshness-name,
+.app-traffic-freshness-status {
+  font-weight: 700;
+}
+
+.app-traffic-freshness-views .app-traffic-freshness-name {
+  color: var(--brutal-accent) !important;
+}
+
+.app-traffic-freshness-clones .app-traffic-freshness-name {
+  color: var(--brutal-accent-2) !important;
+}
+
 .app-brutal-stat {
   border-radius: 0 !important;
   background: var(--brutal-elevated) !important;
@@ -733,6 +777,7 @@ html[data-bs-theme="midnight"] .app-brutalist .app-brutal-breadcrumb a:focus-vis
   .sidebar-collapsed .app-theme-toggle #theme-toggle-label { display: none; }
   .sidebar-collapsed .app-theme-toggle { font-size: 1rem !important; }
   .sidebar-collapsed .app-brutal-sidebar .app-brutal-console-footer { display: none; }
+  .sidebar-collapsed .app-brutal-sidebar #sync-status { display: none; }
 }
 
 .app-sidebar-control label {

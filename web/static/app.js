@@ -118,10 +118,19 @@ function applyTheme(theme) {
   }
 }
 
+function closeMobileSidebar() {
+  if (window.innerWidth >= 992 || !window.bootstrap?.Offcanvas) return;
+  const sidebar = document.getElementById('brutalSidebar');
+  if (!sidebar) return;
+  const instance = window.bootstrap.Offcanvas.getInstance(sidebar);
+  if (instance) instance.hide();
+}
+
 function toggleTheme() {
   const theme = currentTheme();
   const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'midnight' : 'light';
   applyTheme(nextTheme);
+  closeMobileSidebar();
   requestAnimationFrame(() => {
     refreshRepoCharts();
     refreshIndexListCharts();
