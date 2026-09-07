@@ -706,6 +706,13 @@ html[data-bs-theme="midnight"] .app-brutalist .app-brutal-breadcrumb a:focus-vis
   box-shadow: 3px 3px 0 var(--brutal-shadow-core);
 }
 
+.sidebar-collapsed .app-sync-tooltip:hover::after {
+  width: min(28rem, calc(100vw - 5rem));
+  max-width: calc(100vw - 5rem);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 @media (min-width: 992px) {
   .sidebar-collapsed .app-brutal-sidebar {
     width: 76px;

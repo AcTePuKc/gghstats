@@ -77,7 +77,7 @@
         {{end}}
         <div class="p-3 border-top border-3 border-dark mt-auto">
           {{if .SyncUIEnabled}}
-          <button id="sync-now-btn" type="button" class="btn app-brutal-btn app-sidebar-tooltip btn-sm w-100 mb-2 text-uppercase fw-bold"{{if .SyncScopeRepo}} data-sync-repo="{{.SyncScopeRepo}}" data-tooltip="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}" aria-label="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}"{{else}} data-tooltip="{{call .T "common.sync_all_aria"}}" aria-label="{{call .T "common.sync_all_aria"}}"{{end}}>{{if .SyncScopeRepo}}{{call .T "common.sync_repo"}}{{else}}{{call .T "common.sync_all"}}{{end}}</button>
+          <button id="sync-now-btn" type="button" class="btn app-brutal-btn app-sidebar-tooltip app-sync-tooltip btn-sm w-100 mb-2 text-uppercase fw-bold"{{if .SyncScopeRepo}} data-sync-repo="{{.SyncScopeRepo}}" data-tooltip="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}" aria-label="{{call .Tfmt "common.sync_repo_aria" (dict "repo" .SyncScopeRepo)}}"{{else}} data-tooltip="{{call .T "common.sync_all_aria"}}" aria-label="{{call .T "common.sync_all_aria"}}"{{end}}>{{if .SyncScopeRepo}}{{call .T "common.sync_repo"}}{{else}}{{call .T "common.sync_all"}}{{end}}</button>
           <p id="sync-status" class="small app-brutal-muted mb-2" aria-live="polite"></p>
           {{end}}
           {{if eq .PageID "index"}}

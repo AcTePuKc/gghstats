@@ -942,11 +942,16 @@ function initSyncControl() {
   let pollTimer = null;
   let wasRunning = false;
   const pageRepo = syncScopeRepo();
+  const baseTooltip = btn.dataset.tooltip || btn.getAttribute('aria-label') || '';
+  const setSyncStatus = (message) => {
+    statusEl.textContent = message;
+    btn.dataset.tooltip = message ? `${baseTooltip}\n${message}` : baseTooltip;
+  };
 
   const refreshStatus = async () => {
     try {
       const st = await fetchSyncStatus();
-      if (st) statusEl.textContent = formatSyncStatus(st);
+      if (st) setSyncStatus(formatSyncStatus(st));
       if (wasRunning && st && !st.running && pageRepo && st.repo === pageRepo && !st.last_error) {
         window.location.reload();
         return;
@@ -963,13 +968,13 @@ function initSyncControl() {
         }
       }
     } catch {
-      statusEl.textContent = 'Could not load sync status';
+      setSyncStatus('Could not load sync status');
     }
   };
 
   const runSync = async (token) => {
     btn.disabled = true;
-    statusEl.textContent = pageRepo ? `Starting sync for ${pageRepo}…` : 'Starting sync…';
+    setSyncStatus(pageRepo ? `Starting sync for ${pageRepo}…` : 'Starting sync…');
     try {
       const res = await fetch(syncPostURL(), {
         method: 'POST',
@@ -977,7 +982,7 @@ function initSyncControl() {
       });
       if (res.status === 401) {
         sessionStorage.removeItem(SYNC_TOKEN_KEY);
-        statusEl.textContent = 'Invalid API token';
+        setSyncStatus('Invalid API token');
         btn.disabled = false;
         const retry = await requestSyncTokenModal({ invalid: true });
         if (retry) {
@@ -987,32 +992,33 @@ function initSyncControl() {
         return;
       }
       if (res.status === 404) {
-        statusEl.textContent = 'Sync API disabled (set GGHSTATS_API_TOKEN)';
+        setSyncStatus('Sync API disabled (set GGHSTATS_API_TOKEN)');
         btn.disabled = false;
         return;
       }
       if (res.status === 403) {
         const body = await res.json().catch(() => ({}));
-        statusEl.textContent =
+        setSyncStatus(
           body.error === 'ip_not_whitelisted'
             ? uiT('js.sync_ip_not_whitelisted')
-            : uiT('js.sync_failed');
+            : uiT('js.sync_failed')
+        );
         btn.disabled = false;
         return;
       }
       if (res.status === 429) {
-        statusEl.textContent = uiT('js.sync_rate_limited');
+        setSyncStatus(uiT('js.sync_rate_limited'));
         btn.disabled = false;
         return;
       }
       if (res.status === 409) {
-        statusEl.textContent = uiT('js.sync_already_running');
+        setSyncStatus(uiT('js.sync_already_running'));
       } else if (!res.ok) {
-        statusEl.textContent = uiT('js.sync_start_failed');
+        setSyncStatus(uiT('js.sync_start_failed'));
       }
       await refreshStatus();
     } catch {
-      statusEl.textContent = 'Could not start sync';
+      setSyncStatus('Could not start sync');
       btn.disabled = false;
     }
   };
