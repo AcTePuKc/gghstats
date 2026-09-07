@@ -789,10 +789,31 @@ GGHSTATS_WHITELIST=10.0.0.0/8,172.16.0.0/12,192.168.1.0/24
 
 # Protect only API and sync endpoints; dashboard stays public
 GGHSTATS_WHITELIST=10.0.0.0/8
-GGHSTATS_WHITELIST_PATHS=/api/,/h2h
+  GGHSTATS_WHITELIST_PATHS=/api/,/h2h
 ```
 
 Single IPs without a CIDR mask are treated as `/32`. Invalid entries are silently skipped.
+
+### Settings and browser preferences
+
+The dashboard provides a protected `/settings` page with a redacted overview of
+the running instance. It never displays credentials, database paths, or other
+secret values. The only editable preferences are the default dashboard locale
+and compact number formatting; both are stored in a separate local settings
+file next to the configured database and take effect after saving without a
+process restart.
+
+When `GGHSTATS_API_TOKEN` is configured, opening **Settings** from the browser
+prompts for that API token. The browser uses it to establish a short-lived,
+HttpOnly settings session. The session cookie is opaque and does not contain the
+raw token; the existing same-origin browser flow may retain the token in
+`sessionStorage` for Sync and later Settings saves. This is the expected flow
+for the Traefik/self-hosted deployment.
+
+When no API token is configured, Settings is available only when gghstats is
+bound to a loopback address such as `127.0.0.1`. Remote, unauthenticated
+instances do not expose the Settings link. The API token is separate from the
+GitHub token used to collect repository data.
 
 ### Web UI languages (i18n)
 
