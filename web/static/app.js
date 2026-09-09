@@ -814,7 +814,7 @@ async function fetchSyncStatus() {
 }
 
 /** @returns {Promise<string|null>} */
-function requestSyncTokenModal({ invalid = false } = {}) {
+function requestSyncTokenModal({ invalid = false, purpose = 'sync' } = {}) {
   const modalEl = document.getElementById('sync-token-modal');
   if (!modalEl || typeof bootstrap === 'undefined') {
     return Promise.resolve(null);
@@ -824,6 +824,10 @@ function requestSyncTokenModal({ invalid = false } = {}) {
   const errorEl = document.getElementById('sync-token-error');
   const submitBtn = document.getElementById('sync-token-submit');
   if (!input || !errorEl || !submitBtn) return Promise.resolve(null);
+
+  submitBtn.textContent = uiT(
+    purpose === 'settings' ? 'js.token_continue' : 'js.token_save_sync'
+  );
 
   return new Promise((resolve) => {
     let settled = false;
@@ -903,14 +907,14 @@ async function obtainSettingsSession() {
   }
   if (token) sessionStorage.removeItem(SYNC_TOKEN_KEY);
 
-  token = await requestSyncTokenModal();
+  token = await requestSyncTokenModal({ purpose: 'settings' });
   if (!token) return null;
   if (await establishSettingsSession(token)) {
     sessionStorage.setItem(SYNC_TOKEN_KEY, token);
     return token;
   }
 
-  const retry = await requestSyncTokenModal({ invalid: true });
+  const retry = await requestSyncTokenModal({ invalid: true, purpose: 'settings' });
   if (!retry || !(await establishSettingsSession(retry))) return null;
   sessionStorage.setItem(SYNC_TOKEN_KEY, retry);
   return retry;

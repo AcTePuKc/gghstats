@@ -323,6 +323,7 @@
     "sync_done": "Synchronisation terminée",
     "token_required": "Jeton API requis",
     "token_save_sync": "Enregistrer et synchroniser",
+    "token_continue": "Continuer",
     "settings_saved": "Préférences enregistrées",
     "settings_save_failed": "Impossible d’enregistrer les préférences",
     "settings_invalid_token": "Jeton API invalide"

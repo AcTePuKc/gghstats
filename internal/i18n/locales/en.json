@@ -323,6 +323,7 @@
     "sync_done": "Sync finished",
     "token_required": "API token required",
     "token_save_sync": "Save & sync",
+    "token_continue": "Continue",
     "settings_saved": "Preferences saved",
     "settings_save_failed": "Could not save preferences",
     "settings_invalid_token": "Invalid API token"

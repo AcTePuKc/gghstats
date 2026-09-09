@@ -323,6 +323,7 @@
     "sync_done": "Синхронизацията завърши",
     "token_required": "Нужен е API токен",
     "token_save_sync": "Запази и синхронизирай",
+    "token_continue": "Продължи",
     "settings_saved": "Настройките са запазени",
     "settings_save_failed": "Настройките не могат да бъдат запазени",
     "settings_invalid_token": "Невалиден API токен"

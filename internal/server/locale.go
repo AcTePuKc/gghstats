@@ -149,6 +149,7 @@ func jsI18nPayload(bundle *i18n.Bundle, locale string) map[string]string {
 		"js.sync_done",
 		"js.token_required",
 		"js.token_save_sync",
+		"js.token_continue",
 		"js.settings_saved",
 		"js.settings_save_failed",
 		"js.settings_invalid_token",

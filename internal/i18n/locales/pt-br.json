@@ -323,6 +323,7 @@
     "sync_done": "Sincronização concluída",
     "token_required": "Token da API é obrigatório",
     "token_save_sync": "Salvar e sincronizar",
+    "token_continue": "Continuar",
     "settings_saved": "Preferências salvas",
     "settings_save_failed": "Não foi possível salvar as preferências",
     "settings_invalid_token": "Token da API inválido"
