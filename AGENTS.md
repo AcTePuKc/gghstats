@@ -24,7 +24,7 @@ Do the **VERSION bump as a dedicated commit on `develop`** after the feature/doc
 | 6 | **BSD ports** | `gmake port-freebsd-sync` and/or `gmake port-openbsd-sync` so `PORTVERSION` / OpenBSD `PKGNAME` match |
 | 7 | **Plans / ROADMAP** | Close or retarget band notes if this release ends a band (optional but preferred) |
 | 8 | **Gate** | `make release-check` (includes **cover ≥80%**) — run only after user asks |
-| 9 | **Ship** | Merge `develop` → `main`, annotated tag `v<semver>`, push tag — **only after user explicitly approves** |
+| 9 | **Ship** | Open a **PR `develop` → `main`**, merge it via PR (**never** a local `git merge` or direct push to `main`), annotated tag `v<semver>`, push tag — **only after user explicitly approves** |
 
 **Follow-ups (other repos, after the GitHub Release is green):** pin **`GGHSTATS_VERSION`** / Helm `appVersion` in **gghstats-selfhosted**; marketing sites if they pin the app version.
 
