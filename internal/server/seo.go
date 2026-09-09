@@ -67,7 +67,7 @@ func handleRobots(cfg Config) http.HandlerFunc {
 			return
 		}
 		base := publicBaseURL(r, cfg.PublicURL)
-		_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /metrics\nSitemap: %s/sitemap.xml\n", base)
+		_, _ = fmt.Fprintf(w, "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /metrics\nDisallow: /*/traffic.json\nDisallow: /*/*/traffic.json\nSitemap: %s/sitemap.xml\n", base)
 	}
 }
 

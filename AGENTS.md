@@ -1,7 +1,7 @@
 # Agent Guidelines (gghstats)
 
 - Use English for all project artifacts (code, docs, commit messages, UI text).
-- Follow git flow: feature work in `develop`; releases from `main`.
+- Follow git flow: work on **topic branches** (opened from `develop`, merged to `develop` via PR); releases from `main`. **Never commit directly to `develop` or `main`.**
 - **Never** merge to **`main`**, create/push a release tag, or run `make release` / trigger the Release workflow **without explicit user approval in the current conversation.** Ask first — even if `release-check` is green. Surprises on `main` miss checklist items (SPEC “as of”, badges, README tables, BSD sync, follow-up pins).
 - Before release (after user OK), run `make release-check` (lint, tests, **cover ≥80%**, security, **docker-scan**; requires Docker). See **SPEC §6.1**.
 - Keep `VERSION`, README badges, and release tags synchronized. Deployment manifests (Compose prod, Helm, observability) belong in the **gghstats-selfhosted** repository, not in this repo.
@@ -24,7 +24,7 @@ Do the **VERSION bump as a dedicated commit on `develop`** after the feature/doc
 | 6 | **BSD ports** | `gmake port-freebsd-sync` and/or `gmake port-openbsd-sync` so `PORTVERSION` / OpenBSD `PKGNAME` match |
 | 7 | **Plans / ROADMAP** | Close or retarget band notes if this release ends a band (optional but preferred) |
 | 8 | **Gate** | `make release-check` (includes **cover ≥80%**) — run only after user asks |
-| 9 | **Ship** | Merge `develop` → `main`, annotated tag `v<semver>`, push tag — **only after user explicitly approves** |
+| 9 | **Ship** | Open a **PR `develop` → `main`**, merge it via PR (**never** a local `git merge` or direct push to `main`), annotated tag `v<semver>`, push tag — **only after user explicitly approves** |
 
 **Follow-ups (other repos, after the GitHub Release is green):** pin **`GGHSTATS_VERSION`** / Helm `appVersion` in **gghstats-selfhosted**; marketing sites if they pin the app version.
 
