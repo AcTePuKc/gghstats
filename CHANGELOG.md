@@ -7,6 +7,24 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-09
+
+### Added
+
+- **Responsive dashboard UX (#46):** collapsible sidebar rail, light/dark/midnight theme cycle, language control with autonyms, and mobile offcanvas nav polish (including close-button fix, #56).
+- **Gated Settings page (#46):** `GET /settings` for allow-listed presentation preferences; API-token gate (or loopback-only when unbound to a token); browser path via Sync-style token modal → short-lived HttpOnly HMAC session cookie; ops detail without secret values.
+- **Locales:** Bulgarian (`bg`) and Russian (`ru`, experimental) enabled by default with chart/settings keys; existing locales updated for Settings/UI strings.
+- **Optional soft dashboard skin:** `contrib/themes/example-soft-dashboard.css` for `GGHSTATS_CUSTOM_CSS` (neo-brutalist `app.css` remains the default).
+
+### Changed
+
+- **Compact numbers live:** chart/number formatting reads the live SettingsManager snapshot so `CompactNumbers` takes effect after save without restart.
+
+### Fixed
+
+- **Settings token modal label:** primary button shows **Continue** for Settings (Sync keeps **Save & sync**).
+- **Mobile sidebar close (#56):** header X closes the offcanvas; avoid Bootstrap `data-bs-dismiss` console error on `offcanvas-lg`.
+
 ## [1.5.2] - 2026-09-08
 
 ### Fixed
@@ -630,7 +648,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.2...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/hrodrig/gghstats/compare/v1.5.2...v1.6.0
 [1.5.2]: https://github.com/hrodrig/gghstats/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/hrodrig/gghstats/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/hrodrig/gghstats/compare/v1.4.0...v1.5.0
