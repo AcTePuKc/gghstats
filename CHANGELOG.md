@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **robots.txt does not disallow `traffic.json` (#52):** public `robots.txt` now emits `Disallow: /*/traffic.json` and `Disallow: /*/*/traffic.json` so token-gated chart JSON downloads are reported as blocked-by-robots rather than 401. The repo-page download link also carries `rel="nofollow"`.
+
 ## [1.5.1] - 2026-08-30
 
 ### Fixed

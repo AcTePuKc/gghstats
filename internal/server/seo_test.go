@@ -89,6 +89,12 @@ func TestRobotsPublicURL(t *testing.T) {
 	if !strings.Contains(body, "Disallow: /api/") {
 		t.Fatalf("body = %q", body)
 	}
+	if !strings.Contains(body, "Disallow: /*/traffic.json\n") {
+		t.Fatalf("body = %q", body)
+	}
+	if !strings.Contains(body, "Disallow: /*/*/traffic.json\n") {
+		t.Fatalf("body = %q", body)
+	}
 }
 
 func TestSitemapIncludesRepos(t *testing.T) {
