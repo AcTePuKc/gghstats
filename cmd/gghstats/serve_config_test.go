@@ -34,6 +34,19 @@ func TestLoadServeConfigDefaults(t *testing.T) {
 	}
 }
 
+func TestIsLoopbackBindHost(t *testing.T) {
+	for _, host := range []string{"127.0.0.1", "::1", "[::1]"} {
+		if !isLoopbackBindHost(host) {
+			t.Errorf("isLoopbackBindHost(%q) = false, want true", host)
+		}
+	}
+	for _, host := range []string{"0.0.0.0", "192.168.1.10", "localhost", ""} {
+		if isLoopbackBindHost(host) {
+			t.Errorf("isLoopbackBindHost(%q) = true, want false", host)
+		}
+	}
+}
+
 func TestLoadServeConfigOpenBrowser(t *testing.T) {
 	t.Setenv("GGHSTATS_OPEN_BROWSER", "true")
 	cfg := loadServeConfig()

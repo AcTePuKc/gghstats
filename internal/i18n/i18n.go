@@ -161,7 +161,7 @@ func NormalizeLocale(s string) string {
 // ParseEnabledLocales parses GGHSTATS_ENABLED_LOCALES (comma-separated).
 func ParseEnabledLocales(s string) []string {
 	if strings.TrimSpace(s) == "" {
-		return []string{"en", "es", "de", "fr", "pt-br"}
+		return []string{"en", "es", "de", "fr", "pt-br", "bg", "ru"}
 	}
 	var out []string
 	for _, part := range strings.Split(s, ",") {
@@ -238,6 +238,8 @@ func LangAttr(locale string) string {
 		return "fr"
 	case "pt-br":
 		return "pt-BR"
+	case "bg":
+		return "bg"
 	default:
 		return locale
 	}

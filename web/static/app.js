@@ -12,7 +12,11 @@ function uiT(key, vars) {
 
 function currentTheme() {
   const theme = document.documentElement.getAttribute('data-bs-theme');
-  return theme === 'dark' ? 'dark' : 'light';
+  return theme === 'dark' || theme === 'midnight' ? theme : 'light';
+}
+
+function isDarkTheme() {
+  return currentTheme() !== 'light';
 }
 
 const mouseLinePlugin = {
@@ -26,7 +30,7 @@ const mouseLinePlugin = {
     ctx.moveTo(x, yAxis.top);
     ctx.lineTo(x, yAxis.bottom);
     ctx.lineWidth = 1;
-    ctx.strokeStyle = currentTheme() === 'dark'
+    ctx.strokeStyle = isDarkTheme()
       ? 'rgba(255, 255, 255, 0.35)'
       : 'rgba(100, 149, 237, 0.45)';
     ctx.stroke();
@@ -35,7 +39,7 @@ const mouseLinePlugin = {
 };
 
 function chartThemeColors() {
-  const dark = currentTheme() === 'dark';
+  const dark = isDarkTheme();
   const body = document.body;
   const root = getComputedStyle(body.classList.contains('app-brutalist') ? body : document.documentElement);
 
@@ -61,7 +65,7 @@ function chartThemeColors() {
 }
 
 function chartTooltipOptions(opts = {}) {
-  const dark = currentTheme() === 'dark';
+  const dark = isDarkTheme();
   const formatValues = opts.formatValues !== false;
   const asPercent = opts.asPercent === true;
   const base = {
@@ -96,16 +100,48 @@ function chartTooltipOptions(opts = {}) {
 }
 
 function applyTheme(theme) {
+  if (theme !== 'light' && theme !== 'dark' && theme !== 'midnight') theme = 'light';
   document.documentElement.setAttribute('data-bs-theme', theme);
   localStorage.setItem('gghstats-theme', theme);
   const btn = document.getElementById('theme-toggle');
   if (btn) {
-    btn.textContent = theme === 'dark' ? uiT('common.theme_dark') : uiT('common.theme_light');
+    const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'midnight' : 'light';
+    const labelKey = nextTheme === 'dark' ? 'common.theme_dark' : nextTheme === 'midnight' ? 'common.theme_midnight' : 'common.theme_light';
+    const label = uiT(labelKey);
+    const labelEl = document.getElementById('theme-toggle-label');
+    if (labelEl) labelEl.textContent = label;
+    btn.setAttribute('aria-label', label);
+    btn.dataset.tooltip = label;
+    btn.dataset.themeAction = nextTheme;
+    const icon = btn.querySelector('.app-theme-icon');
+    if (icon) icon.textContent = nextTheme === 'light' ? '☀' : nextTheme === 'midnight' ? '◉' : '☾';
   }
 }
 
+function closeMobileSidebar() {
+  if (window.innerWidth >= 992 || !window.bootstrap?.Offcanvas) return;
+  const sidebar = document.getElementById('brutalSidebar');
+  if (!sidebar) return;
+  const instance = window.bootstrap.Offcanvas.getInstance(sidebar);
+  if (instance) instance.hide();
+}
+
+function initMobileSidebarClose() {
+  const sidebar = document.getElementById('brutalSidebar');
+  const closeButton = sidebar?.querySelector('[data-gghstats-role="sidebar-close"]');
+  if (!sidebar || !closeButton) return;
+
+  closeButton.addEventListener('click', () => {
+    if (window.innerWidth >= 992 || !window.bootstrap?.Offcanvas) return;
+    window.bootstrap.Offcanvas.getOrCreateInstance(sidebar).hide();
+  });
+}
+
 function toggleTheme() {
-  applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+  const theme = currentTheme();
+  const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'midnight' : 'light';
+  applyTheme(nextTheme);
+  closeMobileSidebar();
   requestAnimationFrame(() => {
     refreshRepoCharts();
     refreshIndexListCharts();
@@ -123,6 +159,53 @@ function initThemeToggle() {
     applyTheme(currentTheme());
   }
   btn.addEventListener('click', toggleTheme);
+}
+
+function initSidebarToggle() {
+  const btn = document.getElementById('sidebar-toggle');
+  if (!btn) return;
+
+  const update = () => {
+    const collapsed = document.documentElement.classList.contains('sidebar-collapsed');
+    btn.setAttribute('aria-expanded', String(!collapsed));
+    const key = collapsed ? 'nav.expand_nav' : 'nav.collapse_nav';
+    const label = uiT(key);
+    btn.setAttribute('aria-label', label);
+    btn.dataset.tooltip = label;
+    const icon = btn.querySelector('span');
+    if (icon) icon.textContent = collapsed ? '›' : '‹';
+  };
+
+  btn.addEventListener('click', () => {
+    const collapsed = document.documentElement.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('gghstats-sidebar-collapsed', String(collapsed));
+    update();
+  });
+  update();
+}
+
+function initLanguageSelect() {
+  const select = document.getElementById('language-select');
+  if (!select) return;
+  select.addEventListener('change', () => {
+    if (select.value) window.location.assign(select.value);
+  });
+}
+
+function initCollapsiblePanels() {
+  const toggles = document.querySelectorAll('.app-panel-toggle');
+  for (const toggle of toggles) {
+    const target = document.querySelector(toggle.dataset.bsTarget);
+    const icon = toggle.querySelector('span');
+    if (!target || !icon) continue;
+    const update = () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      icon.textContent = expanded ? '⌃' : '⌄';
+    };
+    target.addEventListener('shown.bs.collapse', update);
+    target.addEventListener('hidden.bs.collapse', update);
+    update();
+  }
 }
 
 const repoChartCanvasIds = ['chart_clones', 'chart_views', 'chart_stars'];
@@ -742,7 +825,7 @@ async function fetchSyncStatus() {
 }
 
 /** @returns {Promise<string|null>} */
-function requestSyncTokenModal({ invalid = false } = {}) {
+function requestSyncTokenModal({ invalid = false, purpose = 'sync' } = {}) {
   const modalEl = document.getElementById('sync-token-modal');
   if (!modalEl || typeof bootstrap === 'undefined') {
     return Promise.resolve(null);
@@ -752,6 +835,10 @@ function requestSyncTokenModal({ invalid = false } = {}) {
   const errorEl = document.getElementById('sync-token-error');
   const submitBtn = document.getElementById('sync-token-submit');
   if (!input || !errorEl || !submitBtn) return Promise.resolve(null);
+
+  submitBtn.textContent = uiT(
+    purpose === 'settings' ? 'js.token_continue' : 'js.token_save_sync'
+  );
 
   return new Promise((resolve) => {
     let settled = false;
@@ -811,6 +898,57 @@ function requestSyncTokenModal({ invalid = false } = {}) {
   });
 }
 
+async function establishSettingsSession(token) {
+  if (!token) return false;
+  try {
+    const res = await fetch('/api/v1/settings/session', {
+      method: 'POST',
+      headers: { 'x-api-token': token }
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function obtainSettingsSession() {
+  let token = syncApiToken();
+  if (token && await establishSettingsSession(token)) {
+    return token;
+  }
+  if (token) sessionStorage.removeItem(SYNC_TOKEN_KEY);
+
+  token = await requestSyncTokenModal({ purpose: 'settings' });
+  if (!token) return null;
+  if (await establishSettingsSession(token)) {
+    sessionStorage.setItem(SYNC_TOKEN_KEY, token);
+    return token;
+  }
+
+  const retry = await requestSyncTokenModal({ invalid: true, purpose: 'settings' });
+  if (!retry || !(await establishSettingsSession(retry))) return null;
+  sessionStorage.setItem(SYNC_TOKEN_KEY, retry);
+  return retry;
+}
+
+function initSettingsAccess() {
+  const links = document.querySelectorAll('[data-gghstats-settings-link][data-settings-auth="token"]');
+  const start = document.querySelector('[data-settings-auth-start]');
+  const openSettings = async (event, target) => {
+    event?.preventDefault();
+    if (await obtainSettingsSession()) {
+      window.location.assign(target);
+    }
+  };
+
+  links.forEach(link => {
+    link.addEventListener('click', event => openSettings(event, link.href));
+  });
+  if (start) {
+    start.addEventListener('click', event => openSettings(event, window.location.href));
+  }
+}
+
 function initSyncControl() {
   const btn = document.getElementById('sync-now-btn');
   const statusEl = document.getElementById('sync-status');
@@ -819,11 +957,16 @@ function initSyncControl() {
   let pollTimer = null;
   let wasRunning = false;
   const pageRepo = syncScopeRepo();
+  const baseTooltip = btn.dataset.tooltip || btn.getAttribute('aria-label') || '';
+  const setSyncStatus = (message) => {
+    statusEl.textContent = message;
+    btn.dataset.tooltip = message ? `${baseTooltip}\n${message}` : baseTooltip;
+  };
 
   const refreshStatus = async () => {
     try {
       const st = await fetchSyncStatus();
-      if (st) statusEl.textContent = formatSyncStatus(st);
+      if (st) setSyncStatus(formatSyncStatus(st));
       if (wasRunning && st && !st.running && pageRepo && st.repo === pageRepo && !st.last_error) {
         window.location.reload();
         return;
@@ -840,13 +983,13 @@ function initSyncControl() {
         }
       }
     } catch {
-      statusEl.textContent = 'Could not load sync status';
+      setSyncStatus('Could not load sync status');
     }
   };
 
   const runSync = async (token) => {
     btn.disabled = true;
-    statusEl.textContent = pageRepo ? `Starting sync for ${pageRepo}…` : 'Starting sync…';
+    setSyncStatus(pageRepo ? `Starting sync for ${pageRepo}…` : 'Starting sync…');
     try {
       const res = await fetch(syncPostURL(), {
         method: 'POST',
@@ -854,7 +997,7 @@ function initSyncControl() {
       });
       if (res.status === 401) {
         sessionStorage.removeItem(SYNC_TOKEN_KEY);
-        statusEl.textContent = 'Invalid API token';
+        setSyncStatus('Invalid API token');
         btn.disabled = false;
         const retry = await requestSyncTokenModal({ invalid: true });
         if (retry) {
@@ -864,32 +1007,33 @@ function initSyncControl() {
         return;
       }
       if (res.status === 404) {
-        statusEl.textContent = 'Sync API disabled (set GGHSTATS_API_TOKEN)';
+        setSyncStatus('Sync API disabled (set GGHSTATS_API_TOKEN)');
         btn.disabled = false;
         return;
       }
       if (res.status === 403) {
         const body = await res.json().catch(() => ({}));
-        statusEl.textContent =
+        setSyncStatus(
           body.error === 'ip_not_whitelisted'
             ? uiT('js.sync_ip_not_whitelisted')
-            : uiT('js.sync_failed');
+            : uiT('js.sync_failed')
+        );
         btn.disabled = false;
         return;
       }
       if (res.status === 429) {
-        statusEl.textContent = uiT('js.sync_rate_limited');
+        setSyncStatus(uiT('js.sync_rate_limited'));
         btn.disabled = false;
         return;
       }
       if (res.status === 409) {
-        statusEl.textContent = uiT('js.sync_already_running');
+        setSyncStatus(uiT('js.sync_already_running'));
       } else if (!res.ok) {
-        statusEl.textContent = uiT('js.sync_start_failed');
+        setSyncStatus(uiT('js.sync_start_failed'));
       }
       await refreshStatus();
     } catch {
-      statusEl.textContent = 'Could not start sync';
+      setSyncStatus('Could not start sync');
       btn.disabled = false;
     }
   };
@@ -962,8 +1106,73 @@ function initTrafficJSONDownload() {
   });
 }
 
+function initSettingsForm() {
+  const form = document.getElementById('settings-form');
+  const statusEl = document.getElementById('settings-save-status');
+  if (!form || !statusEl) return;
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = form.querySelector('button[type="submit"]');
+    const select = document.getElementById('settings-default-locale');
+    const compact = document.getElementById('settings-compact-numbers');
+    if (!select || !compact) return;
+
+    const localOnly = form.dataset.localOnly === 'true';
+    let token = localOnly ? '' : syncApiToken();
+
+    if (submit) submit.disabled = true;
+    statusEl.textContent = '';
+    try {
+      const save = () => fetch('/api/v1/settings', {
+        method: 'POST',
+        headers: Object.assign({ 'content-type': 'application/json' }, token ? { 'x-api-token': token } : {}),
+        body: JSON.stringify({
+          default_locale: select.value,
+          compact_numbers: compact.checked
+        })
+      });
+      let res = await save();
+      if (res.status === 401 && !localOnly) {
+        token = await obtainSettingsSession();
+        if (token) res = await save();
+      }
+      if (res.status === 401) {
+        sessionStorage.removeItem(SYNC_TOKEN_KEY);
+        statusEl.textContent = uiT('js.settings_invalid_token');
+        return;
+      }
+      if (!res.ok) {
+        statusEl.textContent = uiT('js.settings_save_failed');
+        return;
+      }
+      statusEl.textContent = uiT('js.settings_saved');
+      document.cookie = `gghstats_locale=${encodeURIComponent(select.value)}; path=/; max-age=31536000; samesite=lax`;
+      window.setTimeout(() => window.location.reload(), 350);
+    } catch {
+      statusEl.textContent = uiT('js.settings_save_failed');
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+}
+
+function initInitialSyncRefresh() {
+  const state = document.getElementById('initial-sync-state');
+  if (!state || state.dataset.syncRunning !== 'true') return;
+
+  const refresh = () => {
+    if (document.visibilityState === 'visible') window.location.reload();
+  };
+  window.setTimeout(refresh, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle();
+  initMobileSidebarClose();
+  initSidebarToggle();
+  initLanguageSelect();
+  initCollapsiblePanels();
   initRepoCharts();
   initIndexListCharts();
   initCloneStatisticsSelector();
@@ -971,6 +1180,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initBadgeEmbed();
   initSyncControl();
   initTrafficJSONDownload();
+  initSettingsForm();
+  initSettingsAccess();
+  initInitialSyncRefresh();
 });
 
 function renderMetrics(canvasId, data, uniqueCol, countCol, chartLabel) {
