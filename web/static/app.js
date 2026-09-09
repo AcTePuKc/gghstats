@@ -126,6 +126,17 @@ function closeMobileSidebar() {
   if (instance) instance.hide();
 }
 
+function initMobileSidebarClose() {
+  const sidebar = document.getElementById('brutalSidebar');
+  const closeButton = sidebar?.querySelector('[data-gghstats-role="sidebar-close"]');
+  if (!sidebar || !closeButton) return;
+
+  closeButton.addEventListener('click', () => {
+    if (window.innerWidth >= 992 || !window.bootstrap?.Offcanvas) return;
+    window.bootstrap.Offcanvas.getOrCreateInstance(sidebar).hide();
+  });
+}
+
 function toggleTheme() {
   const theme = currentTheme();
   const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'midnight' : 'light';
@@ -1158,6 +1169,7 @@ function initInitialSyncRefresh() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initThemeToggle();
+  initMobileSidebarClose();
   initSidebarToggle();
   initLanguageSelect();
   initCollapsiblePanels();
