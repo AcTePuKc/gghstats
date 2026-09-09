@@ -46,6 +46,13 @@ type Config struct {
 	PublicURL string
 	// SyncCoordinator serializes background and manual sync runs (nil disables sync API).
 	SyncCoordinator *sync.Coordinator
+	// SyncOnStartup indicates that an initial background sync is expected when
+	// the database is empty. It is used only to make the first-run UI honest.
+	SyncOnStartup bool
+	// InitialSyncPending is set at startup when the visible database was empty
+	// and a startup sync was scheduled. It remains true until that first run
+	// finishes, even if partial repository rows have arrived.
+	InitialSyncPending bool
 	// MetricsRegistry, when set with metrics enabled, is used instead of a minimal registry (see NewMetricsRegistry).
 	MetricsRegistry *prometheus.Registry
 	// DomainMetrics refreshes store gauges on scrape when non-nil.
@@ -65,6 +72,15 @@ type Config struct {
 	// metric-style abbreviations (1.2k, 1.1M) instead of thousands separators
 	// (GGHSTATS_COMPACT_NUMBERS, default false).
 	CompactNumbers bool
+	// Settings is a redacted, read-only snapshot for the settings page. It must
+	// never contain credentials, file paths, or raw proxy/alert configuration.
+	Settings SettingsSnapshot
+	// SettingsManager is the protected, allow-listed overlay for safe UI
+	// preferences. It never owns credentials or infrastructure settings.
+	SettingsManager *SettingsManager
+	// LocalOnlySettings permits safe preference updates without an API token
+	// only when the server is explicitly bound to a loopback address.
+	LocalOnlySettings bool
 	// RateLimiter, when non-nil, enables per-IP rate limiting (see GGHSTATS_RATE_LIMIT_* env vars).
 	RateLimiter *RateLimiter
 	// Whitelist, when non-nil, restricts access to whitelisted IPs on configured paths (see GGHSTATS_WHITELIST* env vars).
@@ -183,6 +199,12 @@ func mountAPIRoutes(mux *http.ServeMux, cfg Config) {
 	mux.HandleFunc("GET /api/v1/h2h", apiMiddleware(cfg.APIToken, handleAPIH2H(cfg)))
 	mux.HandleFunc("GET /api/v1/charts/index-clones", apiMiddleware(cfg.APIToken, handleAPIIndexClonesChart(cfg)))
 	mux.HandleFunc("GET /api/v1/featured", apiMiddleware(cfg.APIToken, handleAPIFeatured(cfg)))
+	if cfg.SettingsManager != nil && (cfg.APIToken != "" || cfg.LocalOnlySettings) {
+		mux.HandleFunc("POST /api/v1/settings", settingsMiddleware(cfg, handleSettingsUpdate(cfg)))
+	}
+	if cfg.APIToken != "" {
+		mux.HandleFunc("POST /api/v1/settings/session", apiMiddleware(cfg.APIToken, handleSettingsSession(cfg)))
+	}
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		mux.HandleFunc("GET /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStatus(cfg)))
 		mux.HandleFunc("POST /api/v1/sync", apiMiddleware(cfg.APIToken, handleAPISyncStart(cfg)))
@@ -200,6 +222,7 @@ func mountHTMLRoutes(mux *http.ServeMux, cfg Config, tmpl *template.Template) {
 	indexHandler := handleIndex(cfg, cfg.Store, tmpl)
 	trafficJSON := optionalAPITokenMiddleware(cfg.APIToken, handleRepoTrafficJSONExport(cfg))
 	mux.HandleFunc("GET /export.jsonl", handleIndexJSONLExport(cfg))
+	mux.HandleFunc("GET /settings", handleSettingsRoute(cfg, tmpl))
 	mux.HandleFunc("GET /h2h", handleH2HPage(cfg, cfg.Store, tmpl))
 	mux.HandleFunc("GET /featured", handleFeaturedPage(cfg, cfg.Store, tmpl))
 	htmlNotFound := func(w http.ResponseWriter, r *http.Request) {
@@ -428,6 +451,10 @@ type layoutData struct {
 	SyncUIEnabled bool
 	// SyncScopeRepo when set scopes the sidebar sync to this owner/repo (repo detail pages).
 	SyncScopeRepo string
+	// SettingsUIEnabled controls whether the Settings link is available in this deployment.
+	SettingsUIEnabled bool
+	// SettingsTokenRequired marks Settings links that need the browser token session flow.
+	SettingsTokenRequired bool
 	// ShowFeatured shows the "Featured" nav link (hidden when the showcase is empty).
 	ShowFeatured bool
 	// CanonicalURL is the preferred indexing URL (no lang/sort/pagination params on index).
@@ -461,7 +488,7 @@ func normalizeLocaleConfig(cfg Config) Config {
 		cfg.DefaultLocale = i18n.NormalizeLocale(cfg.DefaultLocale)
 	}
 	if len(cfg.EnabledLocales) == 0 {
-		cfg.EnabledLocales = []string{"en", "es", "de", "fr", "pt-br"}
+		cfg.EnabledLocales = []string{"en", "es", "de", "fr", "pt-br", "bg", "ru"}
 	} else {
 		for i, loc := range cfg.EnabledLocales {
 			cfg.EnabledLocales[i] = i18n.NormalizeLocale(loc)
@@ -656,6 +683,8 @@ type indexTemplatePayload struct {
 	ListClonesAggCount   int
 	ListCloneStats       *cloneStatistics
 	ListUniqueCloneStats *cloneStatistics
+	InitialSyncRunning   bool
+	InitialSyncFailed    bool
 }
 
 func buildIndexTemplatePayload(
@@ -725,8 +754,9 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		editable, _ := effectiveEditableSettings(cfg)
 		listClonesAggCount, listClonesAggJSON, listCloneStats, listUniqueCloneStats, err := buildIndexListClonesChartPayload(
-			db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), cfg.CompactNumbers,
+			db, repoNamesFromSummaries(repos), localeFromRequest(r, cfg), editable.CompactNumbers,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -751,6 +781,15 @@ func handleIndex(cfg Config, db *store.Store, tmpl *template.Template) http.Hand
 			"to":    strconv.Itoa(data.To),
 			"total": strconv.Itoa(data.Total),
 		})
+		if query == "" && cfg.SyncCoordinator != nil && cfg.InitialSyncPending {
+			st := cfg.SyncCoordinator.Status()
+			switch {
+			case st.LastFinishedAt == nil:
+				data.InitialSyncRunning = true
+			case st.LastError != "":
+				data.InitialSyncFailed = true
+			}
+		}
 
 		content := executeTemplate(tmpl, "index", data)
 		renderLayout(w, r, tmpl, cfg, layoutData{
@@ -984,6 +1023,8 @@ func renderLayoutStatus(w http.ResponseWriter, r *http.Request, tmpl *template.T
 	if cfg.SyncCoordinator != nil && cfg.APIToken != "" {
 		data.SyncUIEnabled = true
 	}
+	data.SettingsUIEnabled = cfg.APIToken != "" || cfg.LocalOnlySettings
+	data.SettingsTokenRequired = cfg.APIToken != ""
 	if cfg.Store != nil {
 		if n, err := cfg.Store.FeaturedCount(); err == nil && n > 0 {
 			data.ShowFeatured = true

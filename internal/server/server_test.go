@@ -239,6 +239,12 @@ func TestIndexPageClonesChart(t *testing.T) {
 	if !strings.Contains(body, `id="chart_index_clones"`) {
 		t.Error("expected index clones-over-time chart canvas")
 	}
+	if !strings.Contains(body, `<div class="col-12 app-repo-index-table-col">`) {
+		t.Error("expected repository table to use the full dashboard row")
+	}
+	if !strings.Contains(body, `<div class="col-12 app-repo-index-clones-col">`) {
+		t.Error("expected clones chart to use its own full dashboard row")
+	}
 	if !strings.Contains(body, "gghstatsListClonesData") || !strings.Contains(body, "2026-03-18") {
 		t.Error("expected embedded clone series JSON for chart")
 	}

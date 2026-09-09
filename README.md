@@ -92,8 +92,8 @@ Same repository ([`hrodrig/gghstats`](https://github.com/hrodrig/gghstats)):
 - **Clone momentum (7d / 30d)** on each repo page — see velocity vs the previous window of the same length (same formula as H2H)
 - **Head to Head (H2H)** at `/h2h` — compare two repos with weighted share scores (0–100, sum to 100); open *How the H2H score is calculated* on that page for the formula
 - **SVG badges** — embed clones/views/stars in READMEs (`/api/v1/badge/…`); copy Markdown from the repo page
-- **Web UI languages (i18n):** English (default), Spanish, German, French, and Brazilian Portuguese — sidebar **EN | ES | DE | FR | PT**, cookie `gghstats_locale`, env defaults (see [Web UI languages](#web-ui-languages-i18n))
-- **Light/dark theme** in the sidebar, plus optional **custom CSS** (`GGHSTATS_CUSTOM_CSS` / [contrib/themes](contrib/themes/)) when neo-brutalist is too loud
+- **Web UI languages (i18n):** English (default), Spanish, German, French, Brazilian Portuguese, Bulgarian, and Russian — sidebar language selector, cookie `gghstats_locale`, env defaults (see [Web UI languages](#web-ui-languages-i18n))
+- **Light/dark/midnight themes** in the sidebar, plus optional **custom CSS** (`GGHSTATS_CUSTOM_CSS` / [contrib/themes](contrib/themes/)) when you want to customize the dashboard further
 - **JSON API** for scripts and external UIs — start with **[docs/api.md](docs/api.md)** (examples + dogfood map); contracts in [SPEC.md](SPEC.md); optional **`GGHSTATS_API_ONLY`**
 - **CLI** for one-shot `fetch` / `report` / `export` without running the full dashboard
 - **Prometheus metrics** at `GET /metrics` — scrape sync health and HTTP traffic from Grafana/Alloy
@@ -584,7 +584,7 @@ Copy [`.env.example`](.env.example) → `.env` in this repository when running `
 | `GGHSTATS_METRICS_PER_REPO` | `false` | Set to `true` to expose per-repo Prometheus gauges (`owner`, `repo` labels) only for report-visible repositories; higher cardinality |
 | `GGHSTATS_CUSTOM_CSS` | (none) | Optional **regular** `.css` file: loaded **after** built-in `app.css` at `/theme/custom.css` so you can tone down neo-brutalism or replace accents (see [Custom UI theme](#custom-ui-theme-optional)) |
 | `GGHSTATS_DEFAULT_LOCALE` | `en` | Default **dashboard** language when no cookie, `?lang=`, or `Accept-Language` match (see [Web UI languages](#web-ui-languages-i18n)) |
-| `GGHSTATS_ENABLED_LOCALES` | `en,es,de` | Comma-separated locales shown in the sidebar selector and accepted from `?lang=` / cookie |
+| `GGHSTATS_ENABLED_LOCALES` | `en,es,de,fr,pt-br,bg,ru` | Comma-separated locales shown in the sidebar selector and accepted from `?lang=` / cookie |
 | `GGHSTATS_RATE_LIMIT_ENABLED` | `true` | Set to `false` to disable per-IP rate limiting |
 | `GGHSTATS_RATE_LIMIT_REQUESTS` | `120` | Requests per time window before limiting (per IP) |
 | `GGHSTATS_RATE_LIMIT_PERIOD` | `1m` | Time window for rate limiting (Go duration, e.g. `30s`, `5m`) |
@@ -789,16 +789,37 @@ GGHSTATS_WHITELIST=10.0.0.0/8,172.16.0.0/12,192.168.1.0/24
 
 # Protect only API and sync endpoints; dashboard stays public
 GGHSTATS_WHITELIST=10.0.0.0/8
-GGHSTATS_WHITELIST_PATHS=/api/,/h2h
+  GGHSTATS_WHITELIST_PATHS=/api/,/h2h
 ```
 
 Single IPs without a CIDR mask are treated as `/32`. Invalid entries are silently skipped.
+
+### Settings and browser preferences
+
+The dashboard provides a protected `/settings` page with a redacted overview of
+the running instance. It never displays credentials, database paths, or other
+secret values. The only editable preferences are the default dashboard locale
+and compact number formatting; both are stored in a separate local settings
+file next to the configured database and take effect after saving without a
+process restart.
+
+When `GGHSTATS_API_TOKEN` is configured, opening **Settings** from the browser
+prompts for that API token. The browser uses it to establish a short-lived,
+HttpOnly settings session. The session cookie is opaque and does not contain the
+raw token; the existing same-origin browser flow may retain the token in
+`sessionStorage` for Sync and later Settings saves. This is the expected flow
+for the Traefik/self-hosted deployment.
+
+When no API token is configured, Settings is available only when gghstats is
+bound to a loopback address such as `127.0.0.1`. Remote, unauthenticated
+instances do not expose the Settings link. The API token is separate from the
+GitHub token used to collect repository data.
 
 ### Web UI languages (i18n)
 
 **Scope:** dashboard HTML and a small set of **browser UI strings** (sync modal, theme toggle label, chart legends). **Not** translated: HTTP API JSON, CLI output, structured logs, or embed badge SVG text.
 
-**Shipped locales:** `en`, `es`, `de`, `fr`, `pt-br` (enable via `GGHSTATS_ENABLED_LOCALES`; default list includes all five).
+**Shipped locales:** `en`, `es`, `de`, `fr`, `pt-br`, `bg`, `ru` (enable via `GGHSTATS_ENABLED_LOCALES`; default list includes all seven).
 
 #### How the active locale is chosen
 
@@ -889,7 +910,7 @@ The shipped look is **neo-brutalist** on purpose—not every user or org wants h
 
 **Local try-out** (no rebuild):
 
-1. Copy one of the **five official example themes** from [`contrib/themes/`](contrib/themes/README.md) (for a stock-Bootstrap feel use **`example-bootstrap-plain.css`**; or write your own CSS targeting `body.app-brutalist` and `html[data-bs-theme="dark"] body.app-brutalist`).
+1. Copy one of the **six official example themes** from [`contrib/themes/`](contrib/themes/README.md) (for the soft dashboard experiment use **`example-soft-dashboard.css`**; for a stock-Bootstrap feel use **`example-bootstrap-plain.css`**; or write your own CSS targeting `body.app-brutalist` and `html[data-bs-theme="dark"] body.app-brutalist`).
 2. Set **`GGHSTATS_CUSTOM_CSS`** to the file path and restart **`gghstats serve`**. The layout adds `<link href="/theme/custom.css?…">` after `/static/app.css`.
 
 **Bootstrap-plain example** ([`example-bootstrap-plain.css`](contrib/themes/example-bootstrap-plain.css) with `GGHSTATS_CUSTOM_CSS`): repository index in light mode — closer to stock Bootstrap (sans-serif, thin borders, no offset shadows):
