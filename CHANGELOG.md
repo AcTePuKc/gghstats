@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-09-08
+
 ### Fixed
 
 - **robots.txt does not disallow `traffic.json` (#52):** public `robots.txt` now emits `Disallow: /*/traffic.json` and `Disallow: /*/*/traffic.json` so token-gated chart JSON downloads are reported as blocked-by-robots rather than 401. The repo-page download link also carries `rel="nofollow"`.
@@ -628,7 +630,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Project naming and module path finalized as `gghstats` (binary, Docker image, `GGHSTATS_*` environment variables).
 - Toolchain and build base image aligned to Go **1.26.1**.
 
-[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/hrodrig/gghstats/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/hrodrig/gghstats/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/hrodrig/gghstats/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/hrodrig/gghstats/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/hrodrig/gghstats/compare/v1.3.0...v1.4.0
